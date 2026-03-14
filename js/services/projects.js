@@ -1,0 +1,126 @@
+// ===========================
+// NEXT TASK — Freelance Projects + Orders Service
+// ===========================
+
+import { supabase } from './supabase.js';
+
+export const ProjectsService = {
+
+  // === PROJECTS ===
+
+  async getProjects({ platform, search } = {}) {
+    let query = supabase
+      .from('freelance_projects')
+      .select('*, creator:profiles!freelance_projects_created_by_fkey(full_name)')
+      .order('created_at', { ascending: false });
+
+    if (platform && platform !== 'all') query = query.eq('platform', platform);
+    if (search) query = query.ilike('name', `%${search}%`);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+  },
+
+  async getProject(id) {
+    const { data, error } = await supabase
+      .from('freelance_projects')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async createProject(project) {
+    const { data, error } = await supabase
+      .from('freelance_projects')
+      .insert(project)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async updateProject(id, updates) {
+    const { data, error } = await supabase
+      .from('freelance_projects')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteProject(id) {
+    const { error } = await supabase.from('freelance_projects').delete().eq('id', id);
+    if (error) throw error;
+  },
+
+  // === ORDERS ===
+
+  async getOrders(projectId, { status, search } = {}) {
+    let query = supabase
+      .from('freelance_orders')
+      .select('*, assigned_profile:profiles!freelance_orders_assigned_to_fkey(full_name, role), creator:profiles!freelance_orders_created_by_fkey(full_name)')
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: false });
+
+    if (status && status !== 'all') query = query.eq('status', status);
+    if (search) query = query.ilike('title', `%${search}%`);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+  },
+
+  async createOrder(order) {
+    const { data, error } = await supabase
+      .from('freelance_orders')
+      .insert(order)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async updateOrder(id, updates) {
+    const { data, error } = await supabase
+      .from('freelance_orders')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteOrder(id) {
+    const { error } = await supabase.from('freelance_orders').delete().eq('id', id);
+    if (error) throw error;
+  },
+
+  // Get order count per project
+  async getProjectOrderCount(projectId) {
+    const { count, error } = await supabase
+      .from('freelance_orders')
+      .select('*', { count: 'exact', head: true })
+      .eq('project_id', projectId);
+    if (error) return 0;
+    return count || 0;
+  },
+
+  // Get all order stats
+  async getAllOrderStats() {
+    const { data, error } = await supabase.from('freelance_orders').select('status, amount');
+    if (error) throw error;
+    const stats = { total: 0, new: 0, in_progress: 0, delivered: 0, completed: 0, revision: 0, cancelled: 0, totalRevenue: 0 };
+    (data || []).forEach(o => {
+      stats.total++;
+      if (stats[o.status] !== undefined) stats[o.status]++;
+      if (o.status !== 'cancelled') stats.totalRevenue += (o.amount || 0);
+    });
+    return stats;
+  }
+};
