@@ -475,6 +475,10 @@ function renderVideosList(videos, userProfile) {
   container.innerHTML = videos.map(vid => {
     const st = VIDEO_STATUSES[vid.status] || VIDEO_STATUSES.draft;
     const assignee = vid.assigned_profile;
+    
+    // Per-item edit permission: Admins+ OR the assigned user
+    const canEditItem = canEdit || vid.assigned_to === userProfile.id;
+    
     return `
       <div class="item-card">
         <div class="item-card-header">
@@ -492,7 +496,7 @@ function renderVideosList(videos, userProfile) {
             </div>
           </div>
           <div style="display:flex;gap:4px">
-            ${canEdit ? `<button class="btn btn-ghost btn-sm" data-edit-video="${vid.id}">✏️</button>` : ''}
+            ${canEditItem ? `<button class="btn btn-ghost btn-sm" data-edit-video="${vid.id}">✏️</button>` : ''}
             ${canDelete ? `<button class="btn btn-ghost btn-sm" data-delete-video="${vid.id}">🗑️</button>` : ''}
           </div>
         </div>

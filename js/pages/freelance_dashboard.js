@@ -482,6 +482,10 @@ function renderOrdersList(orders, userProfile) {
   container.innerHTML = orders.map(ord => {
     const st = ORDER_STATUSES[ord.status] || ORDER_STATUSES.new;
     const assignee = ord.assigned_profile;
+    
+    // Per-item edit permission: Admins+ OR the assigned user
+    const canEditItem = canEdit || ord.assigned_to === userProfile.id;
+    
     return `
       <div class="item-card">
         <div class="item-card-header">
@@ -501,7 +505,7 @@ function renderOrdersList(orders, userProfile) {
             </div>
           </div>
           <div style="display:flex;gap:4px">
-            ${canEdit ? `<button class="btn btn-ghost btn-sm" data-edit-order="${ord.id}">✏️</button>` : ''}
+            ${canEditItem ? `<button class="btn btn-ghost btn-sm" data-edit-order="${ord.id}">✏️</button>` : ''}
             ${canDelete ? `<button class="btn btn-ghost btn-sm" data-delete-order="${ord.id}">🗑️</button>` : ''}
           </div>
         </div>

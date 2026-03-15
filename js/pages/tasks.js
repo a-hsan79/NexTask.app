@@ -178,6 +178,9 @@ function renderTasksList(tasks, userProfile) {
     const prio = PRIORITY_INFO[task.priority] || PRIORITY_INFO.medium;
     const assignee = task.assigned_profile;
     
+    // Per-item edit permission: Admins+ OR the assigned user
+    const canEditItem = canEdit || task.assigned_to === userProfile.id;
+    
     return `
       <div class="item-card">
         <div class="item-card-header">
@@ -197,7 +200,7 @@ function renderTasksList(tasks, userProfile) {
             </div>
           </div>
           <div class="item-card-actions">
-            ${canEdit ? `<button class="btn btn-ghost btn-sm" data-edit-task="${task.id}">✏️</button>` : ''}
+            ${canEditItem ? `<button class="btn btn-ghost btn-sm" data-edit-task="${task.id}">✏️</button>` : ''}
             ${canDelete ? `<button class="btn btn-ghost btn-sm" data-delete-task="${task.id}">🗑️</button>` : ''}
           </div>
         </div>
