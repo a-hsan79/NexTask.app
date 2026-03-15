@@ -381,13 +381,42 @@ function initAppShellEvents() {
   // Logout
   const logoutBtn = document.getElementById('logout-btn');
   if (logoutBtn) {
-    logoutBtn.addEventListener('click', async () => {
-      try {
-        await AuthService.signOut();
-        showToast('Signed out successfully.', 'success');
-      } catch (e) {
-        showToast('Error signing out.', 'error');
-      }
+    logoutBtn.addEventListener('click', () => {
+      const modalOverlay = document.getElementById('modal-overlay');
+      const modalContent = document.getElementById('modal-content');
+      if (!modalOverlay || !modalContent) return;
+
+      modalContent.innerHTML = `
+        <div class="modal-header">
+          <h2>Sign Out</h2>
+          <button class="btn-icon" onclick="document.getElementById('modal-overlay').classList.remove('active')">❌</button>
+        </div>
+        <div class="modal-body">
+          <p style="margin-bottom: 20px; font-size: 1.1rem;">Are you sure you want to sign out of NexTask?</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="document.getElementById('modal-overlay').classList.remove('active')">Cancel</button>
+          <button class="btn btn-danger" id="confirm-logout-btn">Yes, Sign Out</button>
+        </div>
+      `;
+
+      modalOverlay.classList.add('active');
+
+      document.getElementById('confirm-logout-btn').addEventListener('click', async (e) => {
+        const btn = e.target;
+        btn.innerHTML = '<div class="spinner"></div>';
+        btn.disabled = true;
+
+        try {
+          await AuthService.signOut();
+          modalOverlay.classList.remove('active');
+          showToast('Signed out successfully.', 'success');
+        } catch (error) {
+          btn.innerHTML = 'Yes, Sign Out';
+          btn.disabled = false;
+          showToast('Error signing out.', 'error');
+        }
+      });
     });
   }
 
