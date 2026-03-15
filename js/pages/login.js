@@ -55,6 +55,10 @@ export function renderLoginPage() {
               </div>
             </div>
 
+            <button type="submit" class="btn btn-primary" id="submit-btn" style="margin-top: 1rem;">
+              <span id="btn-text">Sign In</span>
+              <div class="spinner hidden" id="btn-spinner"></div>
+            </button>
           </form>
         </div>
       </div>
