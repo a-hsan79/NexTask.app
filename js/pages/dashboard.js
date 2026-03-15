@@ -47,6 +47,7 @@ export async function renderDashboardPage(userProfile) {
             <div class="stat-value" id="stat-completed">—</div>
           </div>
         </div>
+        ${hasPermission(role, 'manage_team') ? `
         <div class="stat-card blue skeleton-card">
           <div class="stat-icon">👥</div>
           <div class="stat-info">
@@ -54,6 +55,7 @@ export async function renderDashboardPage(userProfile) {
             <div class="stat-value" id="stat-team">—</div>
           </div>
         </div>
+        ` : ''}
         ${hasPermission(role, 'view_expenses') ? `
         <div class="stat-card orange skeleton-card">
           <div class="stat-icon">💰</div>
@@ -123,6 +125,7 @@ export async function renderDashboardPage(userProfile) {
           </div>
           ` : ''}
 
+          ${hasPermission(role, 'manage_team') ? `
           <!-- Team Overview -->
           <div class="card">
             <h3 style="margin-bottom: var(--space-md)">👥 Team</h3>
@@ -132,6 +135,7 @@ export async function renderDashboardPage(userProfile) {
               <div class="skeleton" style="height:45px"></div>
             </div>
           </div>
+          ` : ''}
         </div>
       </div>
     </div>
@@ -174,10 +178,14 @@ async function loadDashboardData(userProfile) {
 
     const { data: orders } = await ordersQuery;
 
-    // Fetch team count
-    const { count: teamCount } = await supabase
-      .from('profiles')
-      .select('*', { count: 'exact', head: true });
+    // Fetch team count if permitted
+    let teamCount = 0;
+    if (hasPermission(role, 'manage_team')) {
+      const { count } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true });
+      teamCount = count;
+    }
 
     // Fetch stats
     const activeTasks = tasks?.filter(t => t.status !== 'completed').length || 0;
@@ -189,7 +197,8 @@ async function loadDashboardData(userProfile) {
     document.getElementById('stat-tasks').textContent = activeTasks;
     document.getElementById('stat-orders').textContent = activeOrders;
     document.getElementById('stat-completed').textContent = completed;
-    document.getElementById('stat-team').textContent = teamCount || 0;
+    const teamStat = document.getElementById('stat-team');
+    if (teamStat) teamStat.textContent = teamCount || 0;
 
     // Expenses (only for authorized roles)
     if (hasPermission(role, 'view_expenses')) {
@@ -211,14 +220,16 @@ async function loadDashboardData(userProfile) {
     // Render recent orders
     renderRecentOrders(orders || []);
 
-    // Render team overview
-    const { data: teamMembers } = await supabase
-      .from('profiles')
-      .select('*')
-      .order('created_at', { ascending: true })
-      .limit(6);
+    // Render team overview if permitted
+    if (hasPermission(role, 'manage_team')) {
+      const { data: teamMembers } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: true })
+        .limit(6);
 
-    renderTeamOverview(teamMembers || []);
+      renderTeamOverview(teamMembers || []);
+    }
 
   } catch (error) {
     console.error('Dashboard data error:', error);
