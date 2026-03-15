@@ -39,8 +39,13 @@ async function initApp() {
       
       if (currentProfile.is_confirmed) {
         renderAppShell();
-        const savedPage = sessionStorage.getItem('nextask_current_page') || 'dashboard';
-        navigateTo(savedPage);
+        const params = new URLSearchParams(window.location.search);
+        const urlPage = params.get('page');
+        const savedPage = urlPage || sessionStorage.getItem('nextask_current_page') || 'dashboard';
+        navigateTo(savedPage, true);
+        if (!urlPage) {
+          history.replaceState({ page: savedPage }, '', `?page=${savedPage}`);
+        }
       } else {
         await AuthService.signOut();
         renderLoginPage();
@@ -69,9 +74,15 @@ async function initApp() {
       }
 
       if (currentProfile && currentProfile.is_confirmed) {
-        renderAppShell();
-        const savedPage = sessionStorage.getItem('nextask_current_page') || 'dashboard';
-        navigateTo(savedPage);
+        // Only render app shell if not already present
+        if (!document.getElementById('sidebar')) renderAppShell();
+        const params = new URLSearchParams(window.location.search);
+        const urlPage = params.get('page');
+        const savedPage = urlPage || sessionStorage.getItem('nextask_current_page') || 'dashboard';
+        navigateTo(savedPage, true);
+        if (!urlPage) {
+          history.replaceState({ page: savedPage }, '', `?page=${savedPage}`);
+        }
       } else if (currentProfile) {
         await AuthService.signOut();
         // The SIGNED_OUT event will handle rendering login page
@@ -92,6 +103,17 @@ async function initApp() {
   // Custom navigation events
   window.addEventListener('navigate', (e) => {
     navigateTo(e.detail.page);
+  });
+
+  // Browser Back Button (History API)
+  window.addEventListener('popstate', (e) => {
+    if (e.state && e.state.page) {
+      navigateTo(e.state.page, true);
+    } else {
+      const params = new URLSearchParams(window.location.search);
+      const page = params.get('page') || 'dashboard';
+      navigateTo(page, true);
+    }
   });
 
   // Quick action events
@@ -237,7 +259,7 @@ function renderAppShell() {
 // Navigation
 // ===========================
 
-async function navigateTo(page) {
+async function navigateTo(page, skipPushState = false) {
   // Check access
   if (!canAccessPage(currentProfile?.role, page)) {
     showToast('You don\'t have access to this page.', 'error');
@@ -246,6 +268,11 @@ async function navigateTo(page) {
 
   currentPage = page;
   sessionStorage.setItem('nextask_current_page', page);
+
+  // Update browser URL
+  if (!skipPushState) {
+    history.pushState({ page }, '', `?page=${page}`);
+  }
 
   // Update sidebar active state
   document.querySelectorAll('.sidebar-link').forEach(link => {
