@@ -99,5 +99,24 @@ export const NotificationsService = {
       .delete()
       .eq('user_id', userId);
     if (error) throw error;
+  },
+
+  // Real-time listener for new notifications
+  subscribeToNewNotifications(userId, callback) {
+    return supabase
+      .channel(`user-notifs-${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${userId}`
+        },
+        (payload) => {
+          callback(payload.new);
+        }
+      )
+      .subscribe();
   }
 };

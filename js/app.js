@@ -14,11 +14,14 @@ import { renderTasksPage } from './pages/tasks.js';
 import { renderExpensesPage } from './pages/expenses.js';
 import { renderNotificationsPage } from './pages/notifications.js';
 import { renderSettingsPage } from './pages/settings.js';
+import { NotificationsService } from './services/notifications.js';
+import { Notifier } from './utils/notifier.js';
 
 // App State
 let currentUser = null;
 let currentProfile = null;
 let currentPage = 'dashboard';
+let notifSubscription = null;
 
 // ===========================
 // Initialize App
@@ -39,6 +42,8 @@ async function initApp() {
       
       if (currentProfile.is_confirmed) {
         renderAppShell();
+        initNotificationListener();
+
         const params = new URLSearchParams(window.location.search);
         const urlPage = params.get('page');
         const savedPage = urlPage || sessionStorage.getItem('nextask_current_page') || 'dashboard';
@@ -75,7 +80,11 @@ async function initApp() {
 
       if (currentProfile && currentProfile.is_confirmed) {
         // Only render app shell if not already present
-        if (!document.getElementById('sidebar')) renderAppShell();
+        if (!document.getElementById('sidebar')) {
+          renderAppShell();
+          initNotificationListener();
+        }
+
         const params = new URLSearchParams(window.location.search);
         const urlPage = params.get('page');
         const savedPage = urlPage || sessionStorage.getItem('nextask_current_page') || 'dashboard';
@@ -95,6 +104,10 @@ async function initApp() {
       // Only render login page if we aren't already on it (prevents erasing error messages)
       const isAlreadyOnLogin = document.querySelector('.login-page');
       if (!isAlreadyOnLogin) {
+        if (notifSubscription) {
+          notifSubscription.unsubscribe();
+          notifSubscription = null;
+        }
         renderLoginPage();
       }
     }
@@ -468,5 +481,45 @@ function initAppShellEvents() {
 // ===========================
 // Start the app
 // ===========================
+
+// ===========================
+// Real-time Notifications
+// ===========================
+
+function initNotificationListener() {
+  if (!currentProfile || notifSubscription) return;
+
+  notifSubscription = NotificationsService.subscribeToNewNotifications(currentProfile.id, (notif) => {
+    // 1. Show Desktop Notification
+    Notifier.show(notif.title, {
+      body: notif.message,
+      data: { url: `?page=notifications` }
+    });
+
+    // 2. Refresh Unread Badge
+    updateBottomNavBadge();
+    
+    // 3. Refresh Notifications Page if active
+    if (currentPage === 'notifications') {
+      renderNotificationsPage(currentProfile);
+    }
+    
+    // 4. Show Toast
+    showToast(`New Notification: ${notif.title}`, 'info');
+  });
+
+  // Initial badge update
+  updateBottomNavBadge();
+}
+
+async function updateBottomNavBadge() {
+  if (!currentProfile) return;
+  const count = await NotificationsService.getUnreadCount(currentProfile.id);
+  const badge = document.getElementById('notif-badge');
+  if (badge) {
+    badge.textContent = count;
+    badge.classList.toggle('hidden', count === 0);
+  }
+}
 
 document.addEventListener('DOMContentLoaded', initApp);

@@ -6,6 +6,7 @@ import { NotificationsService } from '../services/notifications.js';
 import { TeamService } from '../services/team.js';
 import { hasPermission } from '../utils/permissions.js';
 import { showToast, timeAgo, sanitize, showConfirmModal } from '../utils/helpers.js';
+import { Notifier } from '../utils/notifier.js';
 
 let allNotifications = [];
 
@@ -44,7 +45,12 @@ export async function renderNotificationsPage(userProfile) {
           <button class="filter-chip" data-nfilter="system">🔔 System</button>
           <button class="filter-chip" data-nfilter="reminder">⏰ Reminders</button>
         </div>
-        <button class="btn btn-ghost btn-sm" id="btn-clear-all" style="color:var(--text-muted)">🗑️ Clear All</button>
+        <div style="display:flex;gap:var(--space-sm);align-items:center">
+          ${(Notification.permission !== 'granted') ? `
+            <button class="btn btn-ghost btn-sm" id="btn-enable-desktop-notifs" style="color:var(--primary);font-weight:600">🔔 Enable Desktop Alerts</button>
+          ` : ''}
+          <button class="btn btn-ghost btn-sm" id="btn-clear-all" style="color:var(--text-muted)">🗑️ Clear All</button>
+        </div>
       </div>
 
       <!-- Notifications List -->
@@ -204,6 +210,17 @@ function updateBadge(count) {
 }
 
 function initNotifEvents(userProfile) {
+  // Enable desktop alerts
+  document.getElementById('btn-enable-desktop-notifs')?.addEventListener('click', async () => {
+    const granted = await Notifier.requestPermission();
+    if (granted) {
+      showToast('Desktop alerts enabled! 🔔', 'success');
+      renderNotificationsPage(userProfile); // Re-render to hide button
+    } else {
+      showToast('Permission denied. Please enable in browser settings.', 'warning');
+    }
+  });
+
   // Filter chips
   document.querySelectorAll('[data-nfilter]').forEach(chip => {
     chip.addEventListener('click', () => {
