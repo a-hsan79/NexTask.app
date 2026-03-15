@@ -5,7 +5,7 @@
 import { ChannelsService } from '../services/channels.js';
 import { TeamService } from '../services/team.js';
 import { hasPermission } from '../utils/permissions.js';
-import { getInitials, getAvatarColor, showToast, sanitize, timeAgo, debounce } from '../utils/helpers.js';
+import { getInitials, getAvatarColor, showToast, sanitize, timeAgo, debounce, showConfirmModal } from '../utils/helpers.js';
 
 let allChannels = [];
 let allVideos = [];
@@ -288,7 +288,9 @@ async function saveChannel(userProfile) {
 }
 
 async function deleteChannel(channelId, userProfile) {
-  if (!confirm('Delete this channel and ALL its videos? This cannot be undone.')) return;
+  const confirmed = await showConfirmModal('Delete Channel', 'Delete this channel and ALL its videos? This cannot be undone.');
+  if (!confirmed) return;
+
   try {
     await ChannelsService.deleteChannel(channelId);
     showToast('Channel deleted', 'success');
@@ -679,7 +681,9 @@ async function saveVideo(userProfile) {
 }
 
 async function deleteVideo(videoId, userProfile) {
-  if (!confirm('Delete this video?')) return;
+  const confirmed = await showConfirmModal('Delete Video', 'Are you sure you want to delete this video?');
+  if (!confirmed) return;
+
   try {
     await ChannelsService.deleteVideo(videoId);
     showToast('Video deleted', 'success');

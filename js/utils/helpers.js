@@ -138,3 +138,63 @@ export function getPriorityInfo(priority) {
   };
   return priorities[priority] || priorities.medium;
 }
+
+// Global Confirmation Modal (replaces native window.confirm)
+export function showConfirmModal(title, message, confirmText = 'Yes, Delete', confirmClass = 'btn-danger') {
+  return new Promise((resolve) => {
+    let overlay = document.getElementById('global-confirm-overlay');
+    
+    // Create it if it doesn't exist
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.id = 'global-confirm-overlay';
+      
+      const modal = document.createElement('div');
+      modal.className = 'modal';
+      modal.style.maxWidth = '400px';
+      modal.id = 'global-confirm-content';
+      
+      overlay.appendChild(modal);
+      document.body.appendChild(overlay);
+    }
+    
+    const content = document.getElementById('global-confirm-content');
+    content.innerHTML = `
+      <div class="modal-header">
+        <h2>${sanitize(title)}</h2>
+        <button class="btn-icon" id="global-confirm-close">❌</button>
+      </div>
+      <div class="modal-body">
+        <p style="margin-bottom: 20px; font-size: 1.1rem; color: var(--text-secondary);">${sanitize(message)}</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="global-confirm-cancel">Cancel</button>
+        <button class="btn ${confirmClass}" id="global-confirm-yes">${sanitize(confirmText)}</button>
+      </div>
+    `;
+    
+    // Show modal
+    overlay.classList.add('active');
+    
+    // Handlers
+    const closeBtn = document.getElementById('global-confirm-close');
+    const cancelBtn = document.getElementById('global-confirm-cancel');
+    const yesBtn = document.getElementById('global-confirm-yes');
+    
+    const cleanupAndResolve = (result) => {
+      overlay.classList.remove('active');
+      
+      // Remove event listeners by cloning and replacing nodes to prevent memory leaks if reused quickly
+      closeBtn.replaceWith(closeBtn.cloneNode(true));
+      cancelBtn.replaceWith(cancelBtn.cloneNode(true));
+      yesBtn.replaceWith(yesBtn.cloneNode(true));
+      
+      resolve(result);
+    };
+    
+    closeBtn.addEventListener('click', () => cleanupAndResolve(false));
+    cancelBtn.addEventListener('click', () => cleanupAndResolve(false));
+    yesBtn.addEventListener('click', () => cleanupAndResolve(true));
+  });
+}

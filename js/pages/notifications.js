@@ -5,7 +5,7 @@
 import { NotificationsService } from '../services/notifications.js';
 import { TeamService } from '../services/team.js';
 import { hasPermission } from '../utils/permissions.js';
-import { showToast, timeAgo, sanitize } from '../utils/helpers.js';
+import { showToast, timeAgo, sanitize, showConfirmModal } from '../utils/helpers.js';
 
 let allNotifications = [];
 
@@ -225,7 +225,9 @@ function initNotifEvents(userProfile) {
 
   // Clear all
   document.getElementById('btn-clear-all')?.addEventListener('click', async () => {
-    if (!confirm('Clear all notifications? This cannot be undone.')) return;
+    const confirmed = await showConfirmModal('Clear All Notifications', 'Are you sure you want to clear all your notifications? This cannot be undone.');
+    if (!confirmed) return;
+
     try {
       await NotificationsService.clearAll(userProfile.id);
       showToast('All notifications cleared', 'success');

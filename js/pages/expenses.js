@@ -5,7 +5,7 @@
 import { ExpensesService } from '../services/expenses.js';
 import { TeamService } from '../services/team.js';
 import { hasPermission } from '../utils/permissions.js';
-import { formatCurrency, formatDate, getInitials, getAvatarColor, showToast, sanitize } from '../utils/helpers.js';
+import { formatCurrency, formatDate, getInitials, getAvatarColor, showToast, sanitize, showConfirmModal } from '../utils/helpers.js';
 
 let allExpenses = [];
 let teamMembers = [];
@@ -321,7 +321,9 @@ async function saveExpense(userProfile) {
 }
 
 async function deleteExpense(expenseId, userProfile) {
-  if (!confirm('Are you sure you want to delete this expense?')) return;
+  const confirmed = await showConfirmModal('Delete Expense', 'Are you sure you want to delete this expense?');
+  if (!confirmed) return;
+
   try {
     await ExpensesService.deleteExpense(expenseId);
     showToast('Expense deleted', 'success');

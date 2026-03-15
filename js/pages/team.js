@@ -4,7 +4,7 @@
 
 import { TeamService } from '../services/team.js';
 import { hasPermission, getRoleDisplayName, getRoleBadgeClass } from '../utils/permissions.js';
-import { getInitials, getAvatarColor, showToast, sanitize } from '../utils/helpers.js';
+import { getInitials, getAvatarColor, showToast, sanitize, showConfirmModal } from '../utils/helpers.js';
 
 let allMembers = [];
 let currentUserProfile = null;
@@ -193,7 +193,10 @@ function renderTeamGrid(members) {
         showToast("You cannot remove your own account.", "warning");
         return;
       }
-      if (!confirm('Are you sure you want to remove this member? This action cannot be undone.')) return;
+      
+      const confirmed = await showConfirmModal('Remove Team Member', 'Are you sure you want to remove this member? This action cannot be undone.');
+      if (!confirmed) return;
+      
       try {
         await TeamService.rejectUser(id); // Reusing the delete method
         showToast('Member removed successfully.', 'info');
@@ -359,7 +362,9 @@ function renderPendingGrid(pending) {
   grid.querySelectorAll('[data-reject]').forEach(btn => {
     btn.addEventListener('click', async () => {
       const id = btn.dataset.reject;
-      if (!confirm('Reject and delete this signup?')) return;
+      const confirmed = await showConfirmModal('Reject Signup', 'Are you sure you want to reject and delete this signup request?');
+      if (!confirmed) return;
+      
       try {
         await TeamService.rejectUser(id);
         showToast('User rejected', 'info');

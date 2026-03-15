@@ -5,7 +5,7 @@
 import { ProjectsService } from '../services/projects.js';
 import { TeamService } from '../services/team.js';
 import { hasPermission } from '../utils/permissions.js';
-import { formatCurrency, getInitials, getAvatarColor, showToast, sanitize, timeAgo, formatDate, debounce } from '../utils/helpers.js';
+import { formatCurrency, getInitials, getAvatarColor, showToast, sanitize, timeAgo, formatDate, debounce, showConfirmModal } from '../utils/helpers.js';
 
 let allProjects = [];
 let allOrders = [];
@@ -315,7 +315,9 @@ async function saveProject(userProfile) {
 }
 
 async function deleteProject(projectId, userProfile) {
-  if (!confirm('Delete this project and ALL its orders? This cannot be undone.')) return;
+  const confirmed = await showConfirmModal('Delete Project', 'Delete this project and ALL its orders? This cannot be undone.');
+  if (!confirmed) return;
+
   try {
     await ProjectsService.deleteProject(projectId);
     showToast('Project deleted', 'success');
@@ -636,7 +638,9 @@ async function saveOrder(userProfile) {
 }
 
 async function deleteOrder(orderId, userProfile) {
-  if (!confirm('Delete this order?')) return;
+  const confirmed = await showConfirmModal('Delete Order', 'Are you sure you want to delete this order?');
+  if (!confirmed) return;
+
   try {
     await ProjectsService.deleteOrder(orderId);
     showToast('Order deleted', 'success');

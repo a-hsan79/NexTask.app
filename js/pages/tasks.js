@@ -1,7 +1,7 @@
 import { TasksService } from '../services/tasks.js';
 import { TeamService } from '../services/team.js';
 import { hasPermission } from '../utils/permissions.js';
-import { getInitials, getAvatarColor, showToast, sanitize, timeAgo, formatDate, debounce } from '../utils/helpers.js';
+import { getInitials, getAvatarColor, showToast, sanitize, timeAgo, formatDate, debounce, showConfirmModal } from '../utils/helpers.js';
 
 let allTasks = [];
 let teamMembers = [];
@@ -308,7 +308,9 @@ async function saveTask(userProfile) {
 }
 
 async function deleteTask(taskId, userProfile) {
-  if (!confirm('Are you sure you want to delete this task?')) return;
+  const confirmed = await showConfirmModal('Delete Task', 'Are you sure you want to delete this task?');
+  if (!confirmed) return;
+
   try {
     await TasksService.deleteTask(taskId);
     showToast('Task deleted', 'success');
