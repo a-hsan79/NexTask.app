@@ -80,7 +80,12 @@ async function initApp() {
       currentUser = null;
       currentProfile = null;
       sessionStorage.removeItem('nextask_current_page');
-      renderLoginPage();
+      
+      // Only render login page if we aren't already on it (prevents erasing error messages)
+      const isAlreadyOnLogin = document.querySelector('.login-page');
+      if (!isAlreadyOnLogin) {
+        renderLoginPage();
+      }
     }
   });
 

@@ -21,17 +21,7 @@ export function renderLoginPage() {
           <div id="login-error" class="login-error"></div>
 
           <form id="login-form">
-            <!-- Full Name (only shown on signup) -->
-            <div class="form-group hidden" id="name-group">
-              <label class="form-label" for="full-name">Full Name</label>
-              <input
-                type="text"
-                id="full-name"
-                class="form-input"
-                placeholder="Enter your full name"
-                autocomplete="name"
-              />
-            </div>
+
 
             <!-- Email -->
             <div class="form-group">
@@ -65,28 +55,7 @@ export function renderLoginPage() {
               </div>
             </div>
 
-            <!-- Confirm Password (only shown on signup) -->
-            <div class="form-group hidden" id="confirm-group">
-              <label class="form-label" for="confirm-password">Confirm Password</label>
-              <input
-                type="password"
-                id="confirm-password"
-                class="form-input"
-                placeholder="Confirm your password"
-                autocomplete="new-password"
-              />
-            </div>
-
-            <button type="submit" class="btn btn-primary" id="submit-btn">
-              <span id="btn-text">Sign In</span>
-              <div class="spinner hidden" id="btn-spinner"></div>
-            </button>
           </form>
-
-          <div class="login-toggle">
-            <span id="toggle-text">Don't have an account?</span>
-            <a id="toggle-link">Create one</a>
-          </div>
         </div>
       </div>
     </div>
@@ -96,14 +65,7 @@ export function renderLoginPage() {
 }
 
 function initLoginEvents() {
-  let isSignUp = false;
-
   const form = document.getElementById('login-form');
-  const toggleLink = document.getElementById('toggle-link');
-  const toggleText = document.getElementById('toggle-text');
-  const subtitle = document.getElementById('login-subtitle');
-  const nameGroup = document.getElementById('name-group');
-  const confirmGroup = document.getElementById('confirm-group');
   const btnText = document.getElementById('btn-text');
   const btnSpinner = document.getElementById('btn-spinner');
   const submitBtn = document.getElementById('submit-btn');
@@ -116,28 +78,6 @@ function initLoginEvents() {
     const isPassword = passwordInput.type === 'password';
     passwordInput.type = isPassword ? 'text' : 'password';
     togglePassword.textContent = isPassword ? '🙈' : '👁️';
-  });
-
-  // Toggle between Sign In and Sign Up
-  toggleLink.addEventListener('click', () => {
-    isSignUp = !isSignUp;
-    errorDiv.classList.remove('show');
-
-    if (isSignUp) {
-      subtitle.textContent = 'Create your account';
-      nameGroup.classList.remove('hidden');
-      confirmGroup.classList.remove('hidden');
-      btnText.textContent = 'Create Account';
-      toggleText.textContent = 'Already have an account?';
-      toggleLink.textContent = 'Sign in';
-    } else {
-      subtitle.textContent = 'Sign in to your workspace';
-      nameGroup.classList.add('hidden');
-      confirmGroup.classList.add('hidden');
-      btnText.textContent = 'Sign In';
-      toggleText.textContent = "Don't have an account?";
-      toggleLink.textContent = 'Create one';
-    }
   });
 
   // Form submit
@@ -159,47 +99,16 @@ function initLoginEvents() {
       return;
     }
 
-    if (isSignUp) {
-      const fullName = sanitize(document.getElementById('full-name').value.trim());
-      const confirmPassword = document.getElementById('confirm-password').value;
-
-      if (!fullName) {
-        showError('Please enter your full name.');
-        return;
-      }
-
-      if (password !== confirmPassword) {
-        showError('Passwords do not match.');
-        return;
-      }
-    }
-
     // Show loading
     setLoading(true);
 
     try {
-      if (isSignUp) {
-        const fullName = document.getElementById('full-name').value.trim();
-        await AuthService.signUp(email, password, fullName);
-        // Show success message - admin needs to confirm
-        showSuccess('✅ Account created! Ask your Admin/Owner to confirm your account in Supabase before you can sign in.');
-        // Switch back to login view
-        isSignUp = false;
-        subtitle.textContent = 'Sign in to your workspace';
-        nameGroup.classList.add('hidden');
-        confirmGroup.classList.add('hidden');
-        btnText.textContent = 'Sign In';
-        toggleText.textContent = "Don't have an account?";
-        toggleLink.textContent = 'Create one';
-        form.reset();
-      } else {
-        await AuthService.signIn(email, password);
-        // Auth state change will handle redirect
-      }
+      await AuthService.signIn(email, password);
+      // Wait for auth state change to handle redirect, or error
+      // Do NOT turn off loading here, let the app redirect.
     } catch (error) {
       console.error('Auth error:', error);
       showError(getAuthErrorMessage(error.message));
-    } finally {
       setLoading(false);
     }
   });

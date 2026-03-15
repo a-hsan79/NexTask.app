@@ -6,20 +6,6 @@ import { supabase } from './supabase.js';
 
 export const AuthService = {
 
-  // Sign up new user with email/password
-  async signUp(email, password, fullName) {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName }
-      }
-    });
-    if (error) throw error;
-    // Profile is auto-created by Supabase trigger (handle_new_user)
-    return data;
-  },
-
   // Sign in with email/password
   async signIn(email, password) {
     const { data, error } = await supabase.auth.signInWithPassword({
