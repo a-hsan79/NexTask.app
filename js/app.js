@@ -500,7 +500,9 @@ function initNotificationListener() {
     updateBottomNavBadge();
     
     // 3. Refresh Notifications Page if active
-    if (currentPage === 'notifications') {
+    if (currentPage === 'notifications' && window.refreshNotifications) {
+      window.refreshNotifications(currentProfile);
+    } else if (currentPage === 'notifications') {
       renderNotificationsPage(currentProfile);
     }
     

@@ -18,6 +18,14 @@ const NOTIF_ICONS = {
   reminder: '⏰'
 };
 
+// Global reference for app-level real-time updates
+window.refreshNotifications = async (userProfile) => {
+  if (allNotifications.length > 0) {
+    // Just re-load the data and re-render the list container
+    await loadNotifications(userProfile, document.querySelector('[data-nfilter].active')?.dataset.nfilter || 'all');
+  }
+};
+
 export async function renderNotificationsPage(userProfile) {
   const mainContent = document.getElementById('main-content');
   const isAdmin = ['owner', 'admin'].includes(userProfile.role);

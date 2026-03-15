@@ -103,7 +103,8 @@ export const NotificationsService = {
 
   // Real-time listener for new notifications
   subscribeToNewNotifications(userId, callback) {
-    return supabase
+    console.log(`Subscribing to notifications for user: ${userId}`);
+    const channel = supabase
       .channel(`user-notifs-${userId}`)
       .on(
         'postgres_changes',
@@ -114,9 +115,16 @@ export const NotificationsService = {
           filter: `user_id=eq.${userId}`
         },
         (payload) => {
+          console.log('Real-time notification received:', payload);
           callback(payload.new);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log(`Notification subscription status for ${userId}:`, status);
+        if (status === 'CHANNEL_ERROR') {
+          console.error('Failed to subscribe to real-time notifications. Ensure Realtime is enabled for the table.');
+        }
+      });
+    return channel;
   }
 };
