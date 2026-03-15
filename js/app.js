@@ -203,7 +203,12 @@ function renderAppShell() {
               <div class="sidebar-user-name">${currentProfile?.full_name || 'User'}</div>
               <div class="sidebar-user-role">${getRoleDisplayName(role)}</div>
             </div>
-            <span style="color:var(--text-sidebar-muted);cursor:pointer" id="logout-btn" title="Sign Out">🚪</span>
+            <span style="color:var(--text-sidebar-muted);cursor:pointer;display:flex;align-items:center;transition:color 0.2s;color:#E17055;" id="logout-btn" title="Sign Out">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+                <line x1="12" y1="2" x2="12" y2="12"></line>
+              </svg>
+            </span>
           </div>
         </div>
       </aside>
