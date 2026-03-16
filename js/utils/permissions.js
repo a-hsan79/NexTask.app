@@ -47,8 +47,8 @@ const PERMISSIONS = {
   // Team Management
   add_users: ['owner', 'admin'],
   remove_users: ['owner', 'admin'],
-  manage_team: ['owner', 'admin'],
-  manage_roles: ['owner', 'admin'],
+  manage_team: ['owner', 'admin', 'manager'],
+  manage_roles: ['owner', 'admin', 'manager'],
 
   // Expenses
   view_expenses: ['owner', 'admin'],

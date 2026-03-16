@@ -81,5 +81,24 @@ export const TeamService = {
       .order('full_name');
     if (error) throw error;
     return data || [];
+  },
+
+  // Upload an avatar image to storage
+  async uploadAvatar(file, userId) {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${userId}_${Math.random()}.${fileExt}`;
+    const filePath = `avatars/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(filePath, file);
+
+    if (uploadError) throw uploadError;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(filePath);
+
+    return publicUrl;
   }
 };

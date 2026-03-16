@@ -69,10 +69,22 @@ export async function renderTeamPage(userProfile) {
     <div class="modal-overlay" id="member-modal-overlay">
       <div class="modal">
         <div class="modal-header">
-          <h2>Edit Member</h2>
+          <h2>Edit Team Member</h2>
           <button class="modal-close" id="member-modal-close">✕</button>
         </div>
         <form id="member-form">
+          <!-- Visual Avatar Upload -->
+          <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:var(--space-lg)">
+            <div id="avatar-preview-container" style="position:relative;cursor:pointer;width:100px;height:100px">
+              <div id="modal-avatar-preview" class="avatar avatar-xl" style="width:100px;height:100px;font-size:var(--font-2xl)">JS</div>
+              <div class="avatar-edit-overlay" style="position:absolute;inset:0;background:rgba(0,0,0,0.4);border-radius:50%;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.2s;color:white;font-size:var(--font-sm)">
+                <span>Change</span>
+              </div>
+              <input type="file" id="avatar-input" accept="image/*" style="display:none" />
+            </div>
+            <p style="font-size:var(--font-xs);color:var(--text-muted);margin-top:8px">Click photo to update</p>
+          </div>
+
           <div class="form-group">
             <label class="form-label">Full Name</label>
             <input type="text" class="form-input" id="member-name" required />
@@ -160,7 +172,11 @@ function renderTeamGrid(members) {
     <div class="card" style="position:relative;overflow:hidden">
       <div style="position:absolute;top:0;left:0;right:0;height:4px;background:${getAvatarColor(member.full_name)}"></div>
       <div style="display:flex;align-items:center;gap:var(--space-md);margin-bottom:var(--space-md)">
-        <div class="avatar avatar-lg" style="background:${getAvatarColor(member.full_name)}">${getInitials(member.full_name)}</div>
+        ${member.avatar_url ? `
+          <div class="avatar avatar-lg" style="background-image:url(${member.avatar_url});background-size:cover;background-position:center"></div>
+        ` : `
+          <div class="avatar avatar-lg" style="background:${getAvatarColor(member.full_name)}">${getInitials(member.full_name)}</div>
+        `}
         <div style="flex:1">
           <div style="font-weight:600;font-size:var(--font-lg)">${sanitize(member.full_name)}</div>
           <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
@@ -230,6 +246,26 @@ function initTeamEvents(userProfile) {
     if (e.target.id === 'member-modal-overlay') closeMemberModal();
   });
 
+  // Avatar upload click
+  document.getElementById('avatar-preview-container')?.addEventListener('click', () => {
+    document.getElementById('avatar-input').click();
+  });
+
+  // Avatar preview logic
+  document.getElementById('avatar-input')?.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const preview = document.getElementById('modal-avatar-preview');
+        preview.style.backgroundImage = `url(${ev.target.result})`;
+        preview.style.backgroundSize = 'cover';
+        preview.textContent = '';
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
   document.getElementById('member-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     await saveMember(userProfile);
@@ -245,6 +281,19 @@ function openEditMember(memberId) {
   document.getElementById('member-role').value = member.role;
   document.getElementById('member-remote').value = String(member.is_remote);
   document.getElementById('member-phone').value = member.phone || '';
+  
+  // Update Preview
+  const preview = document.getElementById('modal-avatar-preview');
+  if (member.avatar_url) {
+    preview.style.backgroundImage = `url(${member.avatar_url})`;
+    preview.style.backgroundSize = 'cover';
+    preview.textContent = '';
+  } else {
+    preview.style.backgroundImage = 'none';
+    preview.style.backgroundColor = getAvatarColor(member.full_name);
+    preview.textContent = getInitials(member.full_name);
+  }
+
   document.getElementById('member-modal-overlay').classList.add('active');
 }
 
@@ -270,7 +319,14 @@ async function saveMember(userProfile) {
   btnSpinner.classList.remove('hidden');
 
   try {
+    let avatarUrl = null;
+    const avatarFile = document.getElementById('avatar-input').files[0];
+    if (avatarFile) {
+      avatarUrl = await TeamService.uploadAvatar(avatarFile, memberId);
+    }
+
     const updates = { full_name: fullName, is_remote: isRemote, phone };
+    if (avatarUrl) updates.avatar_url = avatarUrl;
 
     // Only admins/owners can change roles
     if (hasPermission(userProfile.role, 'manage_roles')) {
@@ -321,7 +377,11 @@ function renderPendingGrid(pending) {
     <div class="card" style="position:relative;overflow:hidden;border-color:var(--primary)">
       <div style="position:absolute;top:0;left:0;right:0;height:4px;background:var(--primary)"></div>
       <div style="display:flex;align-items:center;gap:var(--space-md);margin-bottom:var(--space-md)">
-        <div class="avatar avatar-lg" style="background:${getAvatarColor(user.full_name)}">${getInitials(user.full_name)}</div>
+        ${user.avatar_url ? `
+          <div class="avatar avatar-lg" style="background-image:url(${user.avatar_url});background-size:cover;background-position:center"></div>
+        ` : `
+          <div class="avatar avatar-lg" style="background:${getAvatarColor(user.full_name)}">${getInitials(user.full_name)}</div>
+        `}
         <div style="flex:1">
           <div style="font-weight:600;font-size:var(--font-lg)">${sanitize(user.full_name)}</div>
           <div style="font-size:var(--font-xs);color:var(--primary);margin-top:4px">⏳ Awaiting Approval</div>
