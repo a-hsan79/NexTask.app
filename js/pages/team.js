@@ -83,6 +83,15 @@ export async function renderTeamPage(userProfile) {
               <input type="file" id="avatar-input" accept="image/*" style="display:none" />
             </div>
             <p style="font-size:var(--font-xs);color:var(--text-muted);margin-top:8px">Click photo to update</p>
+            
+            <div class="avatar-controls">
+              <button type="button" class="avatar-control-btn" id="btn-preview-avatar" title="View Fullscreen">
+                👁️ Preview
+              </button>
+              <button type="button" class="avatar-control-btn btn-danger-soft" id="btn-remove-avatar" title="Remove Photo">
+                🗑️ Remove
+              </button>
+            </div>
           </div>
 
           <div class="form-group">
@@ -173,7 +182,7 @@ function renderTeamGrid(members) {
       <div style="position:absolute;top:0;left:0;right:0;height:4px;background:${getAvatarColor(member.full_name)}"></div>
       <div style="display:flex;align-items:center;gap:var(--space-md);margin-bottom:var(--space-md)">
         ${member.avatar_url ? `
-          <div class="avatar avatar-lg" style="background-image:url(${member.avatar_url});background-size:cover;background-position:center"></div>
+          <div class="avatar avatar-lg" onclick="window.showLightbox('${member.avatar_url}')" style="background-image:url(${member.avatar_url});background-size:cover;background-position:center;cursor:zoom-in" title="Click to preview"></div>
         ` : `
           <div class="avatar avatar-lg" style="background:${getAvatarColor(member.full_name)}">${getInitials(member.full_name)}</div>
         `}
@@ -266,6 +275,33 @@ function initTeamEvents(userProfile) {
     }
   });
 
+  // Preview Avatar
+  document.getElementById('btn-preview-avatar')?.addEventListener('click', () => {
+    const preview = document.getElementById('modal-avatar-preview');
+    const bg = preview.style.backgroundImage;
+    if (bg && bg !== 'none') {
+      const url = bg.replace(/^url\(["']?/, '').replace(/["']?\)$/, '');
+      window.showLightbox(url);
+    } else {
+      showToast('No photo to preview 📸', 'info');
+    }
+  });
+
+  // Remove Avatar
+  document.getElementById('btn-remove-avatar')?.addEventListener('click', () => {
+    const preview = document.getElementById('modal-avatar-preview');
+    const input = document.getElementById('avatar-input');
+    
+    // Reset preview to initials
+    preview.style.backgroundImage = 'none';
+    preview.style.backgroundColor = getAvatarColor(document.getElementById('member-name').value);
+    preview.textContent = getInitials(document.getElementById('member-name').value);
+    
+    // Reset input
+    input.value = '';
+    input.dataset.removed = 'true'; // Mark for deletion on save
+  });
+
   document.getElementById('member-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     await saveMember(userProfile);
@@ -320,13 +356,26 @@ async function saveMember(userProfile) {
 
   try {
     let avatarUrl = null;
-    const avatarFile = document.getElementById('avatar-input').files[0];
+    const avatarInput = document.getElementById('avatar-input');
+    const avatarFile = avatarInput.files[0];
+    const isRemoved = avatarInput.dataset.removed === 'true';
+
+    // Handle removal or replacement
+    if (isRemoved || avatarFile) {
+      if (currentEditMember?.avatar_url) {
+        await TeamService.deleteAvatar(currentEditMember.avatar_url);
+      }
+      avatarUrl = isRemoved ? null : ''; // If removed, set to null. If file, will be set below.
+    }
+
     if (avatarFile) {
       avatarUrl = await TeamService.uploadAvatar(avatarFile, memberId);
     }
 
     const updates = { full_name: fullName, is_remote: isRemote, phone };
-    if (avatarUrl) updates.avatar_url = avatarUrl;
+    if (isRemoved || avatarUrl !== '') {
+      updates.avatar_url = avatarUrl;
+    }
 
     // Only admins/owners can change roles
     if (hasPermission(userProfile.role, 'manage_roles')) {
@@ -378,7 +427,7 @@ function renderPendingGrid(pending) {
       <div style="position:absolute;top:0;left:0;right:0;height:4px;background:var(--primary)"></div>
       <div style="display:flex;align-items:center;gap:var(--space-md);margin-bottom:var(--space-md)">
         ${user.avatar_url ? `
-          <div class="avatar avatar-lg" style="background-image:url(${user.avatar_url});background-size:cover;background-position:center"></div>
+          <div class="avatar avatar-lg" onclick="window.showLightbox('${user.avatar_url}')" style="background-image:url(${user.avatar_url});background-size:cover;background-position:center;cursor:zoom-in" title="Click to preview"></div>
         ` : `
           <div class="avatar avatar-lg" style="background:${getAvatarColor(user.full_name)}">${getInitials(user.full_name)}</div>
         `}

@@ -3,6 +3,7 @@
 // ===========================
 
 import { AuthService } from '../services/auth.js';
+import { TeamService } from '../services/team.js';
 import { supabase } from '../services/supabase.js';
 import { hasPermission, getRoleDisplayName } from '../utils/permissions.js';
 import { getInitials, getAvatarColor, showToast, sanitize } from '../utils/helpers.js';
@@ -26,14 +27,26 @@ export async function renderSettingsPage(userProfile) {
         <!-- Profile Card -->
         <div class="card" style="padding:var(--space-xl)">
           <h3 style="margin-bottom:var(--space-lg);display:flex;align-items:center;gap:var(--space-sm)">👤 My Profile</h3>
-          <div style="display:flex;align-items:center;gap:var(--space-lg);margin-bottom:var(--space-lg)">
-            <div class="avatar avatar-lg" style="background:${getAvatarColor(userProfile.full_name)};width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:700;color:white">
-              ${getInitials(userProfile.full_name)}
+          <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:var(--space-lg)">
+            <div id="settings-avatar-container" style="position:relative;cursor:pointer;width:100px;height:100px">
+              ${userProfile.avatar_url ? `
+                <div id="settings-avatar-preview" class="avatar avatar-xl" style="width:100px;height:100px;background-image:url(${userProfile.avatar_url});background-size:cover;background-position:center"></div>
+              ` : `
+                <div id="settings-avatar-preview" class="avatar avatar-xl" style="width:100px;height:100px;background:${getAvatarColor(userProfile.full_name)};font-size:var(--font-2xl)">${getInitials(userProfile.full_name)}</div>
+              `}
+              <div class="avatar-edit-overlay" style="position:absolute;inset:0;background:rgba(0,0,0,0.4);border-radius:50%;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.2s;color:white;font-size:var(--font-sm)">
+                <span>Change</span>
+              </div>
+              <input type="file" id="settings-avatar-input" accept="image/*" style="display:none" />
             </div>
-            <div>
-              <div style="font-size:var(--font-lg);font-weight:600">${sanitize(userProfile.full_name)}</div>
-              <div style="color:var(--text-muted);font-size:var(--font-sm)">${sanitize(userProfile.email)}</div>
-              <span class="badge badge-primary" style="margin-top:4px">${getRoleDisplayName(userProfile.role)}</span>
+            
+            <div class="avatar-controls" style="margin-top:var(--space-md)">
+              <button type="button" class="avatar-control-btn" id="btn-settings-preview" title="View Fullscreen">
+                👁️ Preview
+              </button>
+              <button type="button" class="avatar-control-btn btn-danger-soft" id="btn-settings-remove" title="Remove Photo">
+                🗑️ Remove
+              </button>
             </div>
           </div>
 
@@ -140,13 +153,33 @@ function initSettingsEvents(userProfile) {
     e.preventDefault();
     const btnText = document.getElementById('profile-btn-text');
     const spinner = document.getElementById('profile-btn-spinner');
+    
+    // Avatar Logic
+    const avatarInput = document.getElementById('settings-avatar-input');
+    const avatarFile = avatarInput.files[0];
+    const isRemoved = avatarInput.dataset.removed === 'true';
+
     btnText.classList.add('hidden'); spinner.classList.remove('hidden');
 
     try {
+      let avatarUrl = userProfile.avatar_url;
+
+      if (isRemoved || avatarFile) {
+        if (userProfile.avatar_url) {
+          await TeamService.deleteAvatar(userProfile.avatar_url);
+        }
+        avatarUrl = isRemoved ? null : userProfile.avatar_url;
+      }
+
+      if (avatarFile) {
+        avatarUrl = await TeamService.uploadAvatar(avatarFile, userProfile.id);
+      }
+
       const updates = {
         full_name: document.getElementById('settings-name').value.trim(),
         phone: document.getElementById('settings-phone').value.trim() || null,
-        is_remote: document.getElementById('settings-workmode').value === 'true'
+        is_remote: document.getElementById('settings-workmode').value === 'true',
+        avatar_url: avatarUrl
       };
 
       const { error } = await supabase
@@ -159,13 +192,74 @@ function initSettingsEvents(userProfile) {
       // Update local profile
       Object.assign(userProfile, updates);
 
-      // Update sidebar name
+      // Update sidebar
       const sidebarName = document.querySelector('.sidebar-user-name');
+      const sidebarAvatar = document.querySelector('.sidebar-user-avatar');
+      
       if (sidebarName) sidebarName.textContent = updates.full_name;
+      if (sidebarAvatar) {
+        if (updates.avatar_url) {
+          sidebarAvatar.style.backgroundImage = `url(${updates.avatar_url})`;
+          sidebarAvatar.style.backgroundSize = 'cover';
+          sidebarAvatar.textContent = '';
+        } else {
+          sidebarAvatar.style.backgroundImage = 'none';
+          sidebarAvatar.style.backgroundColor = getAvatarColor(updates.full_name);
+          sidebarAvatar.textContent = getInitials(updates.full_name);
+        }
+      }
 
       showToast('Profile updated! ✅', 'success');
+      // Reset input state
+      avatarInput.value = '';
+      avatarInput.dataset.removed = 'false';
     } catch (err) { showToast('Failed: ' + err.message, 'error'); }
     finally { btnText.classList.remove('hidden'); spinner.classList.add('hidden'); }
+  });
+
+  // Avatar Click
+  document.getElementById('settings-avatar-container')?.addEventListener('click', () => {
+    document.getElementById('settings-avatar-input').click();
+  });
+
+  // Avatar Preview
+  document.getElementById('settings-avatar-input')?.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const preview = document.getElementById('settings-avatar-preview');
+        preview.style.backgroundImage = `url(${ev.target.result})`;
+        preview.style.backgroundSize = 'cover';
+        preview.textContent = '';
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  // Fullscreen Preview
+  document.getElementById('btn-settings-preview')?.addEventListener('click', () => {
+    const preview = document.getElementById('settings-avatar-preview');
+    const bg = preview.style.backgroundImage;
+    if (bg && bg !== 'none') {
+      const url = bg.replace(/^url\(["']?/, '').replace(/["']?\)$/, '');
+      window.showLightbox(url);
+    } else {
+      showToast('No photo to preview 📸', 'info');
+    }
+  });
+
+  // Remove Photo
+  document.getElementById('btn-settings-remove')?.addEventListener('click', () => {
+    const preview = document.getElementById('settings-avatar-preview');
+    const input = document.getElementById('settings-avatar-input');
+    
+    preview.style.backgroundImage = 'none';
+    preview.style.backgroundColor = getAvatarColor(userProfile.full_name);
+    preview.textContent = getInitials(userProfile.full_name);
+    
+    input.value = '';
+    input.dataset.removed = 'true';
   });
 
   // Theme toggle

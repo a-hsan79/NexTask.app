@@ -233,9 +233,13 @@ function renderAppShell() {
         <!-- Sidebar Footer: User Info -->
         <div class="sidebar-footer">
           <div class="sidebar-user" id="sidebar-user-menu">
-            <div class="sidebar-user-avatar" style="background:${getAvatarColor(currentProfile?.full_name)}">
-              ${getInitials(currentProfile?.full_name)}
-            </div>
+            ${currentProfile?.avatar_url ? `
+              <div class="sidebar-user-avatar" style="background-image:url(${currentProfile.avatar_url});background-size:cover;background-position:center"></div>
+            ` : `
+              <div class="sidebar-user-avatar" style="background:${getAvatarColor(currentProfile?.full_name)}">
+                ${getInitials(currentProfile?.full_name)}
+              </div>
+            `}
             <div class="sidebar-user-info">
               <div class="sidebar-user-name">${currentProfile?.full_name || 'User'}</div>
               <div class="sidebar-user-role">${getRoleDisplayName(role)}</div>
@@ -264,6 +268,12 @@ function renderAppShell() {
     <!-- Modal Container -->
     <div class="modal-overlay" id="modal-overlay">
       <div class="modal" id="modal-content"></div>
+    </div>
+
+    <!-- Global Lightbox -->
+    <div class="lightbox-overlay" id="lightbox-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:9999;flex-direction:column;align-items:center;justify-content:center;padding:var(--space-2xl);cursor:zoom-out">
+      <div style="position:absolute;top:var(--space-xl);right:var(--space-xl);color:white;font-size:2rem;cursor:pointer" id="lightbox-close">✕</div>
+      <img id="lightbox-img" src="" style="max-width:90%;max-height:85%;border-radius:var(--radius-lg);box-shadow:var(--shadow-2xl);cursor:default" />
     </div>
   `;
 
@@ -485,6 +495,27 @@ function initAppShellEvents() {
       document.getElementById('modal-overlay')?.classList.remove('active');
     }
   });
+
+  // Global Lightbox Events
+  const lightbox = document.getElementById('lightbox-overlay');
+  if (lightbox) {
+    lightbox.addEventListener('click', (e) => {
+      if (e.target.id === 'lightbox-overlay' || e.target.id === 'lightbox-close') {
+        lightbox.style.display = 'none';
+      }
+    });
+  }
+
+  // Global Lightbox Function
+  window.showLightbox = (url) => {
+    if (!url) return;
+    const lightboxImg = document.getElementById('lightbox-img');
+    const lightboxOverlay = document.getElementById('lightbox-overlay');
+    if (lightboxImg && lightboxOverlay) {
+      lightboxImg.src = url;
+      lightboxOverlay.style.display = 'flex';
+    }
+  };
 }
 
 // ===========================

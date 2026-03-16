@@ -100,5 +100,19 @@ export const TeamService = {
       .getPublicUrl(filePath);
 
     return publicUrl;
+  },
+
+  // Delete an avatar from storage
+  async deleteAvatar(url) {
+    if (!url) return;
+    try {
+      // Extract path from URL (Supabase public URL structure)
+      const pathPart = url.split('/storage/v1/object/public/avatars/')[1];
+      if (pathPart) {
+        await supabase.storage.from('avatars').remove([pathPart]);
+      }
+    } catch (err) {
+      console.warn('Failed to delete old avatar:', err);
+    }
   }
 };
