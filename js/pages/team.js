@@ -362,8 +362,9 @@ async function saveMember(userProfile) {
 
     // Handle removal or replacement
     if (isRemoved || avatarFile) {
-      if (currentEditMember?.avatar_url) {
-        await TeamService.deleteAvatar(currentEditMember.avatar_url);
+      const member = allMembers.find(m => m.id === memberId);
+      if (member?.avatar_url) {
+        await TeamService.deleteAvatar(member.avatar_url);
       }
       avatarUrl = isRemoved ? null : ''; // If removed, set to null. If file, will be set below.
     }
