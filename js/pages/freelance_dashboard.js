@@ -130,6 +130,12 @@ async function renderProjectsList(userProfile) {
               <input type="text" class="form-input" id="proj-client" placeholder="Client name" />
             </div>
           </div>
+          <div class="form-group" style="margin-bottom: var(--space-md)">
+            <label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <input type="checkbox" id="proj-public" style="width:18px;height:18px" />
+              <span>Show to Team</span>
+            </label>
+          </div>
           <div class="form-group">
             <label class="form-label">Description</label>
             <textarea class="form-textarea" id="proj-desc" placeholder="Project notes..." style="min-height:60px"></textarea>
@@ -281,6 +287,7 @@ function editProject(projectId) {
   document.getElementById('proj-platform').value = p.platform;
   document.getElementById('proj-client').value = p.client_name || '';
   document.getElementById('proj-desc').value = p.description || '';
+  document.getElementById('proj-public').checked = !!p.is_public;
   document.getElementById('project-modal-overlay').classList.add('active');
 }
 
@@ -298,7 +305,8 @@ async function saveProject(userProfile) {
       name,
       platform: document.getElementById('proj-platform').value,
       client_name: document.getElementById('proj-client').value.trim() || null,
-      description: document.getElementById('proj-desc').value.trim() || null
+      description: document.getElementById('proj-desc').value.trim() || null,
+      is_public: document.getElementById('proj-public').checked
     };
 
     // Safety Timeout: Reset UI if backend hangs for > 30s

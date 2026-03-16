@@ -70,6 +70,7 @@ CREATE TABLE IF NOT EXISTS yt_channels (
   url TEXT,
   description TEXT,
   section TEXT DEFAULT 'automation' CHECK (section IN ('automation', 'office')),
+  is_public BOOLEAN DEFAULT false,
   created_by UUID REFERENCES profiles(id),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -102,6 +103,7 @@ CREATE TABLE IF NOT EXISTS freelance_projects (
   platform TEXT NOT NULL DEFAULT 'direct' CHECK (platform IN ('fiverr', 'upwork', 'direct')),
   client_name TEXT,
   description TEXT,
+  is_public BOOLEAN DEFAULT false,
   created_by UUID REFERENCES profiles(id),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -222,7 +224,11 @@ CREATE POLICY "Admins+ can update profiles" ON profiles FOR UPDATE USING (get_my
 CREATE POLICY "Admins+ can delete profiles" ON profiles FOR DELETE USING (get_my_role() IN ('owner', 'admin'));
 
 -- YT CHANNELS
-CREATE POLICY "Authenticated can view channels" ON yt_channels FOR SELECT USING (auth.uid() IS NOT NULL);
+CREATE POLICY "Authenticated can view channels" ON yt_channels FOR SELECT USING (
+  get_my_role() IN ('owner', 'admin', 'manager') OR 
+  is_public = true OR 
+  EXISTS (SELECT 1 FROM yt_videos WHERE channel_id = yt_channels.id AND (assigned_to = auth.uid() OR created_by = auth.uid()))
+);
 CREATE POLICY "Admins+ can create channels" ON yt_channels FOR INSERT WITH CHECK (get_my_role() IN ('owner', 'admin'));
 CREATE POLICY "Admins+ can update channels" ON yt_channels FOR UPDATE USING (get_my_role() IN ('owner', 'admin'));
 CREATE POLICY "Admins+ can delete channels" ON yt_channels FOR DELETE USING (get_my_role() IN ('owner', 'admin'));
@@ -234,7 +240,11 @@ CREATE POLICY "Admins+ can update videos" ON yt_videos FOR UPDATE USING (get_my_
 CREATE POLICY "Admins+ can delete videos" ON yt_videos FOR DELETE USING (get_my_role() IN ('owner', 'admin', 'manager'));
 
 -- FREELANCE PROJECTS
-CREATE POLICY "Authenticated can view projects" ON freelance_projects FOR SELECT USING (auth.uid() IS NOT NULL);
+CREATE POLICY "Authenticated can view projects" ON freelance_projects FOR SELECT USING (
+  get_my_role() IN ('owner', 'admin', 'manager') OR 
+  is_public = true OR 
+  EXISTS (SELECT 1 FROM freelance_orders WHERE project_id = freelance_projects.id AND (assigned_to = auth.uid() OR created_by = auth.uid()))
+);
 CREATE POLICY "Admins+ can create projects" ON freelance_projects FOR INSERT WITH CHECK (get_my_role() IN ('owner', 'admin'));
 CREATE POLICY "Admins+ can update projects" ON freelance_projects FOR UPDATE USING (get_my_role() IN ('owner', 'admin'));
 CREATE POLICY "Admins+ can delete projects" ON freelance_projects FOR DELETE USING (get_my_role() IN ('owner', 'admin'));

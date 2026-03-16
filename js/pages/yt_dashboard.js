@@ -118,6 +118,12 @@ async function renderChannelsList(userProfile) {
             <label class="form-label">Description</label>
             <textarea class="form-textarea" id="ch-desc" placeholder="Notes about this channel..." style="min-height:60px"></textarea>
           </div>
+          <div class="form-group" style="margin-bottom: var(--space-md)">
+            <label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <input type="checkbox" id="chan-public" style="width:18px;height:18px" />
+              <span>Show to Team</span>
+            </label>
+          </div>
           <input type="hidden" id="ch-edit-id" />
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" id="channel-cancel">Cancel</button>
@@ -252,6 +258,7 @@ function editChannel(channelId) {
   document.getElementById('ch-name').value = ch.name;
   document.getElementById('ch-url').value = ch.url || '';
   document.getElementById('ch-desc').value = ch.description || '';
+  document.getElementById('chan-public').checked = !!ch.is_public;
   document.getElementById('channel-modal-overlay').classList.add('active');
 }
 
@@ -268,7 +275,13 @@ async function saveChannel(userProfile) {
   btnText.classList.add('hidden'); spinner.classList.remove('hidden');
 
   try {
-    const data = { name, url, description, section: currentSection };
+    const data = { 
+      name, 
+      url, 
+      description, 
+      section: currentSection,
+      is_public: document.getElementById('chan-public').checked
+    };
     
     // Safety Timeout: Reset UI if backend hangs for > 30s
     const safetyTimeout = setTimeout(() => {
