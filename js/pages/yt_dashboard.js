@@ -269,8 +269,15 @@ async function saveChannel(userProfile) {
 
   try {
     const data = { name, url, description, section: currentSection };
+    
+    // Safety Timeout: Reset UI if backend hangs for > 30s
+    const safetyTimeout = setTimeout(() => {
+      btnText.classList.remove('hidden'); spinner.classList.add('hidden');
+      showToast('Request is taking too long. Please check your connection.', 'warning');
+    }, 30000);
+
     if (editId) {
-      delete data.section; // Don't change section on edit
+      delete data.section;
       await ChannelsService.updateChannel(editId, data);
       showToast('Channel updated! ✅', 'success');
     } else {
@@ -278,9 +285,12 @@ async function saveChannel(userProfile) {
       await ChannelsService.createChannel(data);
       showToast('Channel created! 🎉', 'success');
     }
+    
+    clearTimeout(safetyTimeout);
     closeModal('channel-modal-overlay');
     await loadChannelsData(userProfile);
   } catch (err) {
+    console.error('Save Channel Error:', err);
     showToast('Failed: ' + err.message, 'error');
   } finally {
     btnText.classList.remove('hidden'); spinner.classList.add('hidden');
@@ -666,6 +676,12 @@ async function saveVideo(userProfile) {
       status: document.getElementById('vid-status').value
     };
 
+    // Safety Timeout: Reset UI if backend hangs for > 30s
+    const safetyTimeout = setTimeout(() => {
+      btnText.classList.remove('hidden'); spinner.classList.add('hidden');
+      showToast('Request is taking too long. Please check your connection.', 'warning');
+    }, 30000);
+
     if (editId) {
       await ChannelsService.updateVideo(editId, data);
       showToast('Video updated! ✅', 'success');
@@ -675,9 +691,12 @@ async function saveVideo(userProfile) {
       await ChannelsService.createVideo(data);
       showToast('Video added! 🎉', 'success');
     }
+    
+    clearTimeout(safetyTimeout);
     closeModal('video-modal-overlay');
     await loadVideosData(userProfile);
   } catch (err) {
+    console.error('Save Video Error:', err);
     showToast('Failed: ' + err.message, 'error');
   } finally {
     btnText.classList.remove('hidden'); spinner.classList.add('hidden');

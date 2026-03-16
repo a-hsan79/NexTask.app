@@ -300,6 +300,13 @@ async function saveProject(userProfile) {
       client_name: document.getElementById('proj-client').value.trim() || null,
       description: document.getElementById('proj-desc').value.trim() || null
     };
+
+    // Safety Timeout: Reset UI if backend hangs for > 30s
+    const safetyTimeout = setTimeout(() => {
+      btnText.classList.remove('hidden'); spinner.classList.add('hidden');
+      showToast('Request is taking too long. Please check your connection.', 'warning');
+    }, 30000);
+
     if (editId) {
       await ProjectsService.updateProject(editId, data);
       showToast('Project updated! ✅', 'success');
@@ -308,9 +315,14 @@ async function saveProject(userProfile) {
       await ProjectsService.createProject(data);
       showToast('Project created! 🎉', 'success');
     }
+    
+    clearTimeout(safetyTimeout);
     closeModal('project-modal-overlay');
     await loadProjectsData(userProfile);
-  } catch (err) { showToast('Failed: ' + err.message, 'error'); }
+  } catch (err) { 
+    console.error('Save Project Error:', err);
+    showToast('Failed: ' + err.message, 'error'); 
+  }
   finally { btnText.classList.remove('hidden'); spinner.classList.add('hidden'); }
 }
 
@@ -626,6 +638,12 @@ async function saveOrder(userProfile) {
       deadline: document.getElementById('ord-deadline').value || null
     };
 
+    // Safety Timeout: Reset UI if backend hangs for > 30s
+    const safetyTimeout = setTimeout(() => {
+      btnText.classList.remove('hidden'); spinner.classList.remove('hidden');
+      showToast('Request is taking too long. Please check your connection.', 'warning');
+    }, 30000);
+
     if (editId) {
       await ProjectsService.updateOrder(editId, data);
       showToast('Order updated! ✅', 'success');
@@ -635,9 +653,14 @@ async function saveOrder(userProfile) {
       await ProjectsService.createOrder(data);
       showToast('Order created! 🎉', 'success');
     }
+    
+    clearTimeout(safetyTimeout);
     closeModal('order-modal-overlay');
     await loadOrdersData(userProfile);
-  } catch (err) { showToast('Failed: ' + err.message, 'error'); }
+  } catch (err) { 
+    console.error('Save Order Error:', err);
+    showToast('Failed: ' + err.message, 'error'); 
+  }
   finally { btnText.classList.remove('hidden'); spinner.classList.add('hidden'); }
 }
 

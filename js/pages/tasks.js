@@ -293,6 +293,12 @@ async function saveTask(userProfile) {
       due_date: document.getElementById('task-due').value || null
     };
 
+    // Safety Timeout: Reset UI if backend hangs for > 30s
+    const safetyTimeout = setTimeout(() => {
+      btnText.classList.remove('hidden'); spinner.classList.add('hidden');
+      showToast('Request is taking too long. Please check your connection.', 'warning');
+    }, 30000);
+
     if (editId) {
       await TasksService.updateTask(editId, data);
       showToast('Task updated! ✅', 'success');
@@ -301,9 +307,12 @@ async function saveTask(userProfile) {
       await TasksService.createTask(data);
       showToast('Task created! 🎉', 'success');
     }
+    
+    clearTimeout(safetyTimeout);
     closeModal();
     await loadTasksData(userProfile);
   } catch (err) {
+    console.error('Save Task Error:', err);
     showToast('Error: ' + err.message, 'error');
   } finally {
     btnText.classList.remove('hidden'); spinner.classList.add('hidden');

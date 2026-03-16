@@ -297,6 +297,12 @@ async function saveExpense(userProfile) {
   btnSpinner.classList.remove('hidden');
 
   try {
+    // Safety Timeout: Reset UI if backend hangs for > 30s
+    const safetyTimeout = setTimeout(() => {
+      btnText.classList.remove('hidden'); btnSpinner.classList.add('hidden');
+      showToast('Request is taking too long. Please check your connection.', 'warning');
+    }, 30000);
+
     await ExpensesService.createExpense({
       title,
       amount,
@@ -308,6 +314,7 @@ async function saveExpense(userProfile) {
       notes
     });
 
+    clearTimeout(safetyTimeout);
     showToast('Expense added! 💰', 'success');
     closeExpenseModal();
     await loadExpensesData(userProfile);

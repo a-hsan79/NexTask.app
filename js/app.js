@@ -22,6 +22,7 @@ let currentUser = null;
 let currentProfile = null;
 let currentPage = 'dashboard';
 let notifSubscription = null;
+let isNavigating = false;
 
 // ===========================
 // Initialize App
@@ -68,40 +69,41 @@ async function initApp() {
 
   // Listen for auth changes
   AuthService.onAuthStateChange(async (event, session) => {
+    console.log(`Auth event: ${event}`);
+
     if (event === 'SIGNED_IN' && session?.user) {
+      // If we already have a profile and it's a token refresh, don't re-render everything
+      if (currentProfile && currentUser?.id === session.user.id) {
+        console.log('Token refreshed, skipping full re-render');
+        currentUser = session.user;
+        return;
+      }
+
       currentUser = session.user;
       try {
         currentProfile = await AuthService.getUserProfile(session.user.id);
-      } catch (e) {
-        // Wait a bit for profile creation
-        await new Promise(r => setTimeout(r, 1000));
-        currentProfile = await AuthService.getUserProfile(session.user.id);
-      }
+        
+        if (currentProfile && currentProfile.is_confirmed) {
+          if (!document.getElementById('sidebar')) {
+            renderAppShell();
+            initNotificationListener();
+          }
 
-      if (currentProfile && currentProfile.is_confirmed) {
-        // Only render app shell if not already present
-        if (!document.getElementById('sidebar')) {
-          renderAppShell();
-          initNotificationListener();
+          const params = new URLSearchParams(window.location.search);
+          const urlPage = params.get('page');
+          const savedPage = urlPage || sessionStorage.getItem('nextask_current_page') || 'dashboard';
+          navigateTo(savedPage, true);
+        } else if (currentProfile) {
+          await AuthService.signOut();
         }
-
-        const params = new URLSearchParams(window.location.search);
-        const urlPage = params.get('page');
-        const savedPage = urlPage || sessionStorage.getItem('nextask_current_page') || 'dashboard';
-        navigateTo(savedPage, true);
-        if (!urlPage) {
-          history.replaceState({ page: savedPage }, '', `?page=${savedPage}`);
-        }
-      } else if (currentProfile) {
-        await AuthService.signOut();
-        // The SIGNED_OUT event will handle rendering login page
+      } catch (err) {
+        console.error('Auth refresh error:', err);
       }
     } else if (event === 'SIGNED_OUT') {
       currentUser = null;
       currentProfile = null;
       sessionStorage.removeItem('nextask_current_page');
       
-      // Only render login page if we aren't already on it (prevents erasing error messages)
       const isAlreadyOnLogin = document.querySelector('.login-page');
       if (!isAlreadyOnLogin) {
         if (notifSubscription) {
@@ -273,77 +275,84 @@ function renderAppShell() {
 // ===========================
 
 async function navigateTo(page, skipPushState = false) {
-  // Check access
-  if (!canAccessPage(currentProfile?.role, page)) {
-    showToast('You don\'t have access to this page.', 'error');
-    return;
-  }
-
-  currentPage = page;
-  sessionStorage.setItem('nextask_current_page', page);
-
-  // Update browser URL
-  if (!skipPushState) {
-    history.pushState({ page }, '', `?page=${page}`);
-  }
-
-  // Update sidebar active state
-  document.querySelectorAll('.sidebar-link').forEach(link => {
-    link.classList.toggle('active', link.dataset.page === page);
-  });
-
-  // Close mobile sidebar
-  document.getElementById('sidebar')?.classList.remove('open');
-  document.getElementById('sidebar-overlay')?.classList.remove('active');
-
-  // Render page
-  const mainContent = document.getElementById('main-content');
+  if (isNavigating) return;
+  isNavigating = true;
 
   try {
-    switch (page) {
-      case 'dashboard':
-        await renderDashboardPage(currentProfile);
-        break;
-      case 'yt_dashboard':
-        await renderYTDashboardPage(currentProfile, 'automation');
-        break;
-      case 'office_yt':
-        await renderYTDashboardPage(currentProfile, 'office');
-        break;
-      case 'freelance_dashboard':
-        await renderFreelanceDashboardPage(currentProfile);
-        break;
-      case 'tasks':
-        await renderTasksPage(currentProfile);
-        break;
-      case 'orders':
-        await renderFreelanceDashboardPage(currentProfile);
-        break;
-      case 'team':
-        await renderTeamPage(currentProfile);
-        break;
-      case 'expenses':
-        await renderExpensesPage(currentProfile);
-        break;
-      case 'notifications':
-        await renderNotificationsPage(currentProfile);
-        break;
-      case 'settings':
-        await renderSettingsPage(currentProfile);
-        break;
-      default:
-        renderComingSoon('Page Not Found', '🔍', 'This page doesn\'t exist.');
+    // Check access
+    if (!canAccessPage(currentProfile?.role, page)) {
+      showToast('You don\'t have access to this page.', 'error');
+      return;
     }
-  } catch (error) {
-    console.error(`Error rendering ${page}:`, error);
-    mainContent.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-icon">❌</div>
-        <h3>Something went wrong</h3>
-        <p>${error.message}</p>
-        <button class="btn btn-primary" onclick="location.reload()">Reload</button>
-      </div>
-    `;
+
+    currentPage = page;
+    sessionStorage.setItem('nextask_current_page', page);
+
+    // Update browser URL
+    if (!skipPushState) {
+      history.pushState({ page }, '', `?page=${page}`);
+    }
+
+    // Update sidebar active state
+    document.querySelectorAll('.sidebar-link').forEach(link => {
+      link.classList.toggle('active', link.dataset.page === page);
+    });
+
+    // Close mobile sidebar
+    document.getElementById('sidebar')?.classList.remove('open');
+    document.getElementById('sidebar-overlay')?.classList.remove('active');
+
+    // Render page
+    const mainContent = document.getElementById('main-content');
+
+    try {
+      switch (page) {
+        case 'dashboard':
+          await renderDashboardPage(currentProfile);
+          break;
+        case 'yt_dashboard':
+          await renderYTDashboardPage(currentProfile, 'automation');
+          break;
+        case 'office_yt':
+          await renderYTDashboardPage(currentProfile, 'office');
+          break;
+        case 'freelance_dashboard':
+          await renderFreelanceDashboardPage(currentProfile);
+          break;
+        case 'tasks':
+          await renderTasksPage(currentProfile);
+          break;
+        case 'orders':
+          await renderFreelanceDashboardPage(currentProfile);
+          break;
+        case 'team':
+          await renderTeamPage(currentProfile);
+          break;
+        case 'expenses':
+          await renderExpensesPage(currentProfile);
+          break;
+        case 'notifications':
+          await renderNotificationsPage(currentProfile);
+          break;
+        case 'settings':
+          await renderSettingsPage(currentProfile);
+          break;
+        default:
+          renderComingSoon('Page Not Found', '🔍', 'This page doesn\'t exist.');
+      }
+    } catch (error) {
+      console.error(`Error rendering ${page}:`, error);
+      mainContent.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">❌</div>
+          <h3>Something went wrong</h3>
+          <p>${error.message}</p>
+          <button class="btn btn-primary" onclick="location.reload()">Reload</button>
+        </div>
+      `;
+    }
+  } finally {
+    isNavigating = false;
   }
 }
 
