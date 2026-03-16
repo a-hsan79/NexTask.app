@@ -157,14 +157,14 @@ function renderAppShell() {
           <div class="sidebar-logo">NT</div>
           <div class="sidebar-brand">
             <span class="sidebar-brand-name">NexTask</span>
-            <span class="sidebar-brand-subtitle">Workspace</span>
+            <span class="sidebar-brand-subtitle">Office Manager</span>
           </div>
         </div>
 
         <nav class="sidebar-nav">
           <!-- Main -->
           <div class="sidebar-section">
-            <div class="sidebar-section-label">Overview</div>
+            <div class="sidebar-section-label">Main</div>
             <a class="sidebar-link active" data-page="dashboard">
               <span class="link-icon">📊</span>
               <span>Dashboard</span>
@@ -173,7 +173,7 @@ function renderAppShell() {
 
           <!-- Work -->
           <div class="sidebar-section">
-            <div class="sidebar-section-label">Automation</div>
+            <div class="sidebar-section-label">Work</div>
             <a class="sidebar-link" data-page="yt_dashboard">
               <span class="link-icon">🎬</span>
               <span>YT Automation</span>
@@ -182,14 +182,13 @@ function renderAppShell() {
               <span class="link-icon">🏢</span>
               <span>Office YT</span>
             </a>
-            <div class="sidebar-section-label" style="margin-top:20px">Projects</div>
             <a class="sidebar-link" data-page="freelance_dashboard">
               <span class="link-icon">💼</span>
               <span>Freelance Orders</span>
             </a>
             <a class="sidebar-link" data-page="tasks">
               <span class="link-icon">📋</span>
-              <span>Task Manager</span>
+              <span>All Tasks</span>
             </a>
           </div>
 
@@ -239,8 +238,8 @@ function renderAppShell() {
               <div class="sidebar-user-name">${currentProfile?.full_name || 'User'}</div>
               <div class="sidebar-user-role">${getRoleDisplayName(role)}</div>
             </div>
-            <span style="color:var(--danger); cursor:pointer; display:flex; align-items:center; transition:opacity 0.2s" id="logout-btn" title="Sign Out">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <span style="color:var(--text-sidebar-muted);cursor:pointer;display:flex;align-items:center;transition:color 0.2s;color:#E17055;" id="logout-btn" title="Sign Out">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
                 <line x1="12" y1="2" x2="12" y2="12"></line>
               </svg>
@@ -265,7 +264,6 @@ function renderAppShell() {
       <div class="modal" id="modal-content"></div>
     </div>
   `;
-
 
   initAppShellEvents();
 }

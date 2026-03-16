@@ -26,30 +26,24 @@ export async function renderTasksPage(userProfile) {
 
   mainContent.innerHTML = `
     <div class="fade-in">
-      <div class="page-header" style="margin-bottom: 40px">
+      <div class="page-header">
         <div>
-          <h1 style="letter-spacing: -1.5px; font-size: 2.5rem; margin-bottom: 8px">📋 Task Manager</h1>
-          <p class="subtitle" style="font-size: 1.1rem">Organize, track, and complete office tasks.</p>
+          <h1>📋 General Tasks</h1>
+          <p class="subtitle">Manage general office tasks and assignments</p>
         </div>
-        <div class="header-actions">
-          ${canCreate ? `
-            <button class="btn btn-primary" id="btn-new-task">
-              <span>+ New Task</span>
-            </button>
-          ` : ''}
-        </div>
+        ${canCreate ? `<button class="btn btn-primary" id="btn-new-task">+ New Task</button>` : ''}
       </div>
 
-      <!-- Stats Cards -->
-      <div class="dashboard-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; margin-bottom: 40px">
-        <div class="stat-card blue skeleton-card">
+      <!-- Stats -->
+      <div class="dashboard-stats">
+        <div class="stat-card blue">
           <div class="stat-icon">📋</div>
           <div class="stat-info">
             <div class="stat-label">Total Tasks</div>
             <div class="stat-value" id="tasks-count-total">—</div>
           </div>
         </div>
-        <div class="stat-card orange skeleton-card">
+        <div class="stat-card orange">
           <div class="stat-icon">🔄</div>
           <div class="stat-info">
             <div class="stat-label">In Progress</div>

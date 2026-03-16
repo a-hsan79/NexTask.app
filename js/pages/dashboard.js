@@ -12,20 +12,20 @@ export async function renderDashboardPage(userProfile) {
 
   mainContent.innerHTML = `
     <div class="fade-in">
-      <div class="page-header" style="margin-bottom: 40px">
+      <div class="page-header">
         <div>
-          <h1 style="letter-spacing: -1.5px; font-size: 2.5rem; margin-bottom: 8px">👋 Hello, ${userProfile.full_name?.split(' ')[0] || 'User'}</h1>
-          <p class="subtitle" style="font-size: 1.1rem">Here's a bird's-eye view of your workspace today.</p>
+          <h1>👋 Welcome back, ${userProfile.full_name?.split(' ')[0] || 'User'}!</h1>
+          <p class="subtitle">Here's what's happening across your workspace today.</p>
         </div>
         <div class="header-actions">
-          <button class="btn btn-secondary" id="toggle-theme" style="width: 44px; height: 44px; padding: 0; border-radius: var(--radius-full)">
+          <button class="btn btn-ghost" id="toggle-theme" title="Toggle dark/light mode">
             🌙
           </button>
         </div>
       </div>
 
       <!-- Stats Cards -->
-      <div class="dashboard-stats" id="dashboard-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; margin-bottom: 40px">
+      <div class="dashboard-stats" id="dashboard-stats">
         <div class="stat-card purple skeleton-card">
           <div class="stat-icon">📋</div>
           <div class="stat-info">
@@ -65,58 +65,58 @@ export async function renderDashboardPage(userProfile) {
         ` : ''}
       </div>
 
-      <div class="dashboard-grid" style="display: grid; grid-template-columns: 2fr 1fr; gap: 32px">
-        <!-- Left Column: Recent Activity -->
-        <div style="display: flex; flex-direction: column; gap: 32px">
+      <div class="dashboard-grid">
+        <!-- Left Column: Recent Tasks -->
+        <div>
           <div class="card recent-section">
-            <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px">
-              <h3 style="font-size: 1.4rem; font-weight: 800; letter-spacing: -0.5px">📋 Recent Tasks</h3>
-              <span class="view-all" data-navigate="tasks" style="color: var(--primary); font-weight: 700; cursor: pointer; font-size: 0.9rem">View All →</span>
+            <div class="section-header">
+              <h3>📋 Recent Tasks</h3>
+              <span class="view-all" data-navigate="tasks">View All →</span>
             </div>
             <div id="recent-tasks-list">
-              <div class="skeleton" style="height:70px;margin-bottom:12px;border-radius:var(--radius-lg)"></div>
-              <div class="skeleton" style="height:70px;margin-bottom:12px;border-radius:var(--radius-lg)"></div>
-              <div class="skeleton" style="height:70px;border-radius:var(--radius-lg)"></div>
+              <div class="skeleton" style="height:60px;margin-bottom:8px"></div>
+              <div class="skeleton" style="height:60px;margin-bottom:8px"></div>
+              <div class="skeleton" style="height:60px"></div>
             </div>
           </div>
 
           <div class="card recent-section">
-            <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px">
-              <h3 style="font-size: 1.4rem; font-weight: 800; letter-spacing: -0.5px">📦 Recent Orders</h3>
-              <span class="view-all" data-navigate="orders" style="color: var(--primary); font-weight: 700; cursor: pointer; font-size: 0.9rem">View All →</span>
+            <div class="section-header">
+              <h3>📦 Recent Orders</h3>
+              <span class="view-all" data-navigate="orders">View All →</span>
             </div>
             <div id="recent-orders-list">
-              <div class="skeleton" style="height:70px;margin-bottom:12px;border-radius:var(--radius-lg)"></div>
-              <div class="skeleton" style="height:70px;margin-bottom:12px;border-radius:var(--radius-lg)"></div>
-              <div class="skeleton" style="height:70px;border-radius:var(--radius-lg)"></div>
+              <div class="skeleton" style="height:60px;margin-bottom:8px"></div>
+              <div class="skeleton" style="height:60px;margin-bottom:8px"></div>
+              <div class="skeleton" style="height:60px"></div>
             </div>
           </div>
         </div>
 
-        <!-- Right Column: Quick Actions & Team -->
-        <div style="display: flex; flex-direction: column; gap: 32px">
+        <!-- Right Column: Quick Actions & Activity -->
+        <div>
           ${hasPermission(role, 'create_tasks') ? `
-          <div class="card glass" style="border: none">
-            <h3 style="margin-bottom: 24px; font-weight: 800; letter-spacing: -0.5px">⚡ Quick Actions</h3>
-            <div class="quick-actions" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px">
-              <button class="quick-action-btn card" data-action="new-task" style="padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 8px; border: none; background: var(--bg-secondary)">
-                <div class="action-icon" style="font-size: 1.5rem">📋</div>
-                <span class="action-label" style="font-weight: 700; font-size: 0.8rem">New Task</span>
+          <div class="card" style="margin-bottom: var(--space-lg)">
+            <h3 style="margin-bottom: var(--space-md)">⚡ Quick Actions</h3>
+            <div class="quick-actions">
+              <button class="quick-action-btn" data-action="new-task">
+                <div class="action-icon" style="background:rgba(108,92,231,0.12);color:var(--primary)">📋</div>
+                <span class="action-label">New Task</span>
               </button>
-              <button class="quick-action-btn card" data-action="new-order" style="padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 8px; border: none; background: var(--bg-secondary)">
-                <div class="action-icon" style="font-size: 1.5rem">📦</div>
-                <span class="action-label" style="font-weight: 700; font-size: 0.8rem">New Order</span>
+              <button class="quick-action-btn" data-action="new-order">
+                <div class="action-icon" style="background:rgba(0,206,201,0.12);color:var(--accent)">📦</div>
+                <span class="action-label">New Order</span>
               </button>
               ${hasPermission(role, 'add_users') ? `
-              <button class="quick-action-btn card" data-action="add-member" style="padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 8px; border: none; background: var(--bg-secondary)">
-                <div class="action-icon" style="font-size: 1.5rem">👤</div>
-                <span class="action-label" style="font-weight: 700; font-size: 0.8rem">Add Member</span>
+              <button class="quick-action-btn" data-action="add-member">
+                <div class="action-icon" style="background:rgba(0,184,148,0.12);color:var(--success)">👤</div>
+                <span class="action-label">Add Member</span>
               </button>
               ` : ''}
               ${hasPermission(role, 'add_expenses') ? `
-              <button class="quick-action-btn card" data-action="add-expense" style="padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 8px; border: none; background: var(--bg-secondary)">
-                <div class="action-icon" style="font-size: 1.5rem">💰</div>
-                <span class="action-label" style="font-weight: 700; font-size: 0.8rem">Add Expense</span>
+              <button class="quick-action-btn" data-action="add-expense">
+                <div class="action-icon" style="background:rgba(253,203,110,0.12);color:#E17055">💰</div>
+                <span class="action-label">Add Expense</span>
               </button>
               ` : ''}
             </div>
@@ -125,11 +125,11 @@ export async function renderDashboardPage(userProfile) {
 
           <!-- Team Overview -->
           <div class="card">
-            <h3 style="margin-bottom: 24px; font-weight: 800; letter-spacing: -0.5px">👥 Team</h3>
+            <h3 style="margin-bottom: var(--space-md)">👥 Team</h3>
             <div id="team-overview">
-              <div class="skeleton" style="height:50px;margin-bottom:12px;border-radius:var(--radius-md)"></div>
-              <div class="skeleton" style="height:50px;margin-bottom:12px;border-radius:var(--radius-md)"></div>
-              <div class="skeleton" style="height:50px;border-radius:var(--radius-md)"></div>
+              <div class="skeleton" style="height:45px;margin-bottom:8px"></div>
+              <div class="skeleton" style="height:45px;margin-bottom:8px"></div>
+              <div class="skeleton" style="height:45px"></div>
             </div>
           </div>
         </div>
