@@ -39,7 +39,7 @@ export async function renderFreelanceDashboardPage(userProfile) {
 
 async function renderProjectsList(userProfile) {
   const mainContent = document.getElementById('main-content');
-  const canCreate = hasPermission(userProfile.role, 'create_orders');
+  const canCreate = hasPermission(userProfile.role, 'create_projects');
 
   mainContent.innerHTML = `
     <div class="fade-in">
@@ -173,8 +173,8 @@ async function loadProjectsData(userProfile, platformFilter = 'all', search = ''
 
 async function renderProjectsGrid(projects, userProfile) {
   const grid = document.getElementById('projects-grid');
-  const canEdit = hasPermission(userProfile.role, 'edit_any_order');
-  const canDelete = hasPermission(userProfile.role, 'delete_orders');
+  const canEdit = hasPermission(userProfile.role, 'edit_projects');
+  const canDelete = hasPermission(userProfile.role, 'delete_projects');
 
   if (!projects.length) {
     grid.innerHTML = `
@@ -465,7 +465,7 @@ async function loadOrdersData(userProfile, statusFilter = 'all', search = '') {
 
 function renderOrdersList(orders, userProfile) {
   const container = document.getElementById('orders-list');
-  const canEdit = hasPermission(userProfile.role, 'edit_any_order');
+  const canEdit = hasPermission(userProfile.role, 'edit_orders');
   const canDelete = hasPermission(userProfile.role, 'delete_orders');
 
   if (!orders.length) {

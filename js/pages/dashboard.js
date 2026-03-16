@@ -47,6 +47,7 @@ export async function renderDashboardPage(userProfile) {
             <div class="stat-value" id="stat-completed">—</div>
           </div>
         </div>
+        ${hasPermission(role, 'view_team_stats') ? `
         <div class="stat-card blue skeleton-card">
           <div class="stat-icon">👥</div>
           <div class="stat-info">
@@ -54,6 +55,7 @@ export async function renderDashboardPage(userProfile) {
             <div class="stat-value" id="stat-team">—</div>
           </div>
         </div>
+        ` : ''}
         ${hasPermission(role, 'view_expenses') ? `
         <div class="stat-card orange skeleton-card">
           <div class="stat-icon">💰</div>
@@ -124,6 +126,7 @@ export async function renderDashboardPage(userProfile) {
           ` : ''}
 
           <!-- Team Overview -->
+          ${hasPermission(role, 'view_team_stats') ? `
           <div class="card">
             <h3 style="margin-bottom: var(--space-md)">👥 Team</h3>
             <div id="team-overview">
@@ -132,6 +135,7 @@ export async function renderDashboardPage(userProfile) {
               <div class="skeleton" style="height:45px"></div>
             </div>
           </div>
+          ` : ''}
         </div>
       </div>
     </div>
@@ -189,7 +193,8 @@ async function loadDashboardData(userProfile) {
     document.getElementById('stat-tasks').textContent = activeTasks;
     document.getElementById('stat-orders').textContent = activeOrders;
     document.getElementById('stat-completed').textContent = completed;
-    document.getElementById('stat-team').textContent = teamCount || 0;
+    const teamStatEl = document.getElementById('stat-team');
+    if (teamStatEl) teamStatEl.textContent = teamCount || 0;
 
     // Expenses (only for authorized roles)
     if (hasPermission(role, 'view_expenses')) {
@@ -299,6 +304,7 @@ function renderRecentOrders(orders) {
 
 function renderTeamOverview(members) {
   const container = document.getElementById('team-overview');
+  if (!container) return;
   if (!members.length) {
     container.innerHTML = '<p style="color:var(--text-muted);font-size:var(--font-sm)">No team members yet.</p>';
     return;

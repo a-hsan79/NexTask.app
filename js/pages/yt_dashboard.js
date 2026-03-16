@@ -35,7 +35,7 @@ export async function renderYTDashboardPage(userProfile, section = 'automation')
 
 async function renderChannelsList(userProfile) {
   const mainContent = document.getElementById('main-content');
-  const canCreate = hasPermission(userProfile.role, 'create_tasks');
+  const canCreate = hasPermission(userProfile.role, 'create_channels');
 
   const isOffice = currentSection === 'office';
   const title = isOffice ? 'Office YT' : 'YT Automation';
@@ -160,8 +160,8 @@ async function loadChannelsData(userProfile, search = '') {
 
 async function renderChannelsGrid(channels, userProfile) {
   const grid = document.getElementById('channels-grid');
-  const canEdit = hasPermission(userProfile.role, 'edit_any_task');
-  const canDelete = hasPermission(userProfile.role, 'delete_tasks');
+  const canEdit = hasPermission(userProfile.role, 'edit_channels');
+  const canDelete = hasPermission(userProfile.role, 'delete_channels');
 
   if (!channels.length) {
     grid.innerHTML = `
@@ -308,8 +308,8 @@ async function openChannelVideos(channelId, userProfile) {
   currentChannel = channel;
 
   const mainContent = document.getElementById('main-content');
-  const canCreate = hasPermission(userProfile.role, 'create_tasks');
-  const canDelete = hasPermission(userProfile.role, 'delete_tasks');
+  const canCreate = hasPermission(userProfile.role, 'create_videos');
+  const canDelete = hasPermission(userProfile.role, 'delete_videos');
 
   mainContent.innerHTML = `
     <div class="fade-in">
@@ -458,8 +458,8 @@ async function loadVideosData(userProfile, statusFilter = 'all', search = '') {
 
 function renderVideosList(videos, userProfile) {
   const container = document.getElementById('videos-list');
-  const canEdit = hasPermission(userProfile.role, 'edit_any_task');
-  const canDelete = hasPermission(userProfile.role, 'delete_tasks');
+  const canEdit = hasPermission(userProfile.role, 'edit_videos');
+  const canDelete = hasPermission(userProfile.role, 'delete_videos');
 
   if (!videos.length) {
     container.innerHTML = `

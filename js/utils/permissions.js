@@ -16,21 +16,33 @@ const ROLES = {
 const PERMISSIONS = {
   // Dashboard — everyone can see
   view_dashboard: ['owner', 'admin', 'manager', 'editor', 'designer', 'writer'],
+  view_team_stats: ['owner', 'admin', 'manager'],
 
-  // Tasks
-  create_tasks: ['owner', 'admin'],
-  assign_tasks: ['owner', 'admin'],
+  // General Tasks
+  create_tasks: ['owner', 'admin', 'manager'],
+  assign_tasks: ['owner', 'admin', 'manager'],
   view_all_tasks: ['owner', 'admin', 'manager'],
   view_own_tasks: ['owner', 'admin', 'manager', 'editor', 'designer', 'writer'],
-  edit_any_task: ['owner', 'admin'],
-  delete_tasks: ['owner', 'admin'],
+  edit_any_task: ['owner', 'admin', 'manager'],
+  delete_tasks: ['owner', 'admin', 'manager'],
 
-  // Orders
-  create_orders: ['owner', 'admin'],
+  // YT Automation (Channels & Videos)
+  create_channels: ['owner', 'admin'],
+  edit_channels: ['owner', 'admin'],
+  delete_channels: ['owner', 'admin'],
+  create_videos: ['owner', 'admin', 'manager'],
+  edit_videos: ['owner', 'admin', 'manager'],
+  delete_videos: ['owner', 'admin', 'manager'],
+
+  // Freelance (Projects & Orders)
+  create_projects: ['owner', 'admin'],
+  edit_projects: ['owner', 'admin'],
+  delete_projects: ['owner', 'admin'],
+  create_orders: ['owner', 'admin', 'manager'],
+  edit_orders: ['owner', 'admin', 'manager'],
+  delete_orders: ['owner', 'admin', 'manager'],
   view_all_orders: ['owner', 'admin', 'manager'],
   view_own_orders: ['owner', 'admin', 'manager', 'editor', 'designer', 'writer'],
-  edit_any_order: ['owner', 'admin'],
-  delete_orders: ['owner', 'admin'],
 
   // Team Management
   add_users: ['owner', 'admin'],
