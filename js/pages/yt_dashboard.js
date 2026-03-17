@@ -12,6 +12,7 @@ let allVideos = [];
 let teamMembers = [];
 let currentChannel = null;
 let currentSection = 'automation';
+let moduleUserProfile = null; // New global reference
 
 const VIDEO_STATUSES = {
   draft:     { label: 'Draft',     icon: '📝', class: 'status-draft' },
@@ -19,12 +20,14 @@ const VIDEO_STATUSES = {
   recording: { label: 'Recording', icon: '🎙️', class: 'status-recording' },
   editing:   { label: 'Editing',   icon: '✂️', class: 'status-editing' },
   uploaded:  { label: 'Uploaded',  icon: '☁️', class: 'status-uploaded' },
-  published: { label: 'Published', icon: '🚀', class: 'status-published' }
+  published: { label: 'Published', icon: '🚀', class: 'status-published' },
+  done:      { label: 'Done',      icon: '✅', class: 'status-done' }
 };
 
 export async function renderYTDashboardPage(userProfile, section = 'automation') {
-  currentChannel = null;
+  moduleUserProfile = userProfile;
   currentSection = section;
+  currentChannel = null;
   teamMembers = await TeamService.getMemberOptions();
   await renderChannelsList(userProfile);
 }
@@ -53,32 +56,53 @@ async function renderChannelsList(userProfile) {
 
       <!-- Stats -->
       <div class="dashboard-stats" id="yt-stats">
-        <div class="stat-card purple">
+        <div class="stat-card purple clickable" id="stat-yt-channels">
           <div class="stat-icon">📺</div>
           <div class="stat-info">
             <div class="stat-label">Channels</div>
             <div class="stat-value" id="yt-channels-count">—</div>
           </div>
         </div>
-        <div class="stat-card blue">
+        <div class="stat-card blue clickable" id="stat-yt-total">
           <div class="stat-icon">🎬</div>
           <div class="stat-info">
             <div class="stat-label">Total Videos</div>
             <div class="stat-value" id="yt-videos-count">—</div>
           </div>
         </div>
-        <div class="stat-card orange">
+        <div class="stat-card orange clickable" id="stat-yt-progress">
           <div class="stat-icon">✂️</div>
           <div class="stat-info">
             <div class="stat-label">In Progress</div>
             <div class="stat-value" id="yt-in-progress">—</div>
           </div>
         </div>
-        <div class="stat-card green">
+        <div class="stat-card green clickable" id="stat-yt-published">
           <div class="stat-icon">🚀</div>
           <div class="stat-info">
-            <div class="stat-label">Published</div>
+            <div class="stat-label">Published / Done</div>
             <div class="stat-value" id="yt-published">—</div>
+          </div>
+        </div>
+        <div class="stat-card pink clickable" id="stat-yt-unassigned">
+          <div class="stat-icon">👤</div>
+          <div class="stat-info">
+            <div class="stat-label">Unassigned</div>
+            <div class="stat-value" id="yt-unassigned">—</div>
+          </div>
+        </div>
+        <div class="stat-card indigo clickable" id="stat-yt-assigned">
+          <div class="stat-icon">📝</div>
+          <div class="stat-info">
+            <div class="stat-label">Assigned</div>
+            <div class="stat-value" id="yt-assigned">—</div>
+          </div>
+        </div>
+        <div class="stat-card teal clickable" id="stat-yt-done">
+          <div class="stat-icon">✅</div>
+          <div class="stat-info">
+            <div class="stat-label">Done Videos</div>
+            <div class="stat-value" id="yt-done">—</div>
           </div>
         </div>
       </div>
@@ -150,6 +174,9 @@ async function loadChannelsData(userProfile, search = '') {
     document.getElementById('yt-videos-count').textContent = stats.total;
     document.getElementById('yt-in-progress').textContent = stats.scripting + stats.recording + stats.editing;
     document.getElementById('yt-published').textContent = stats.published;
+    document.getElementById('yt-unassigned').textContent = stats.unassigned;
+    document.getElementById('yt-assigned').textContent = stats.assigned;
+    document.getElementById('yt-done').textContent = stats.done;
 
     let filtered = allChannels;
     if (search) {
@@ -191,6 +218,8 @@ async function renderChannelsGrid(channels, userProfile) {
         ${canDelete ? `<button class="btn btn-ghost btn-sm" data-delete-channel="${ch.id}" title="Delete">🗑️</button>` : ''}
       </div>
       <div class="project-card-header">
+        ${counts[i].total > 0 && counts[i].total === counts[i].done ? `<div class="completion-badge clickable" data-open-status="done">✅ DONE</div>` : ''}
+        ${counts[i].uploaded > 0 ? `<div class="uploaded-badge clickable" data-open-status="uploaded">☁️ UPLOADED (${counts[i].uploaded})</div>` : ''}
         <div class="project-card-icon">📺</div>
         <div>
           <div class="project-card-title">${sanitize(ch.name)}</div>
@@ -199,7 +228,7 @@ async function renderChannelsGrid(channels, userProfile) {
       </div>
       ${ch.description ? `<p style="font-size:var(--font-xs);color:var(--text-muted);margin-bottom:var(--space-md)">${sanitize(ch.description).slice(0, 80)}</p>` : ''}
       <div class="project-card-stats">
-        <div class="project-card-stat"><strong>${counts[i]}</strong> videos</div>
+        <div class="project-card-stat"><strong>${counts[i].total}</strong> videos</div>
         <div class="project-card-stat">Created ${timeAgo(ch.created_at)}</div>
       </div>
     </div>
@@ -208,6 +237,14 @@ async function renderChannelsGrid(channels, userProfile) {
   // Click channel card → open videos view
   grid.querySelectorAll('[data-channel-id]').forEach(card => {
     card.addEventListener('click', (e) => {
+      // Check for status badge clicks
+      const statusBadge = e.target.closest('[data-open-status]');
+      if (statusBadge) {
+        e.stopPropagation();
+        openChannelVideos(card.dataset.channelId, userProfile, statusBadge.dataset.openStatus);
+        return;
+      }
+
       if (e.target.closest('[data-edit-channel]') || e.target.closest('[data-delete-channel]')) return;
       openChannelVideos(card.dataset.channelId, userProfile);
     });
@@ -239,6 +276,19 @@ function initChannelEvents(userProfile) {
     e.preventDefault();
     await saveChannel(userProfile);
   });
+
+  // Global Stats Click
+  document.getElementById('stat-yt-channels')?.addEventListener('click', () => {
+    // Just scroll to grid if on channels list, but since we are already there, maybe it's fine.
+    // Or we could refresh. For now, let's just make it a no-op or scroll.
+    document.getElementById('channels-grid')?.scrollIntoView({ behavior: 'smooth' });
+  });
+  document.getElementById('stat-yt-total')?.addEventListener('click', () => renderGlobalVideos(userProfile, 'all'));
+  document.getElementById('stat-yt-progress')?.addEventListener('click', () => renderGlobalVideos(userProfile, 'in-progress'));
+  document.getElementById('stat-yt-published')?.addEventListener('click', () => renderGlobalVideos(userProfile, 'published'));
+  document.getElementById('stat-yt-unassigned')?.addEventListener('click', () => renderGlobalVideos(userProfile, 'unassigned'));
+  document.getElementById('stat-yt-assigned')?.addEventListener('click', () => renderGlobalVideos(userProfile, 'assigned'));
+  document.getElementById('stat-yt-done')?.addEventListener('click', () => renderGlobalVideos(userProfile, 'done'));
 }
 
 function openNewChannel() {
@@ -325,7 +375,7 @@ async function deleteChannel(channelId, userProfile) {
 // VIDEOS VIEW (inside a channel)
 // ===========================
 
-async function openChannelVideos(channelId, userProfile) {
+async function openChannelVideos(channelId, userProfile, initialStatus = 'all') {
   const channel = allChannels.find(c => c.id === channelId);
   if (!channel) return;
   currentChannel = channel;
@@ -360,6 +410,7 @@ async function openChannelVideos(channelId, userProfile) {
           <button class="filter-chip" data-vstatus="editing">✂️ Edit</button>
           <button class="filter-chip" data-vstatus="uploaded">☁️ Upload</button>
           <button class="filter-chip" data-vstatus="published">🚀 Live</button>
+          <button class="filter-chip" data-vstatus="done">✅ Done</button>
         </div>
       </div>
 
@@ -446,6 +497,7 @@ async function openChannelVideos(channelId, userProfile) {
                 <option value="editing">✂️ Editing</option>
                 <option value="uploaded">☁️ Uploaded</option>
                 <option value="published">🚀 Published</option>
+                <option value="done">✅ Done</option>
               </select>
             </div>
           </div>
@@ -462,8 +514,15 @@ async function openChannelVideos(channelId, userProfile) {
     </div>
   `;
 
-  await loadVideosData(userProfile);
+  await loadVideosData(userProfile, initialStatus);
   initVideoEvents(userProfile);
+
+  // If initialStatus is not 'all', manually activate the chip
+  if (initialStatus !== 'all') {
+    document.querySelectorAll('[data-vstatus]').forEach(c => {
+      c.classList.toggle('active', c.dataset.vstatus === initialStatus);
+    });
+  }
 }
 
 async function loadVideosData(userProfile, statusFilter = 'all', search = '') {
@@ -730,3 +789,142 @@ async function deleteVideo(videoId, userProfile) {
 function closeModal(id) {
   document.getElementById(id)?.classList.remove('active');
 }
+
+// ===========================
+// GLOBAL VIDEOS VIEW (Flat List)
+// ===========================
+
+async function renderGlobalVideos(userProfile, filterType) {
+  currentChannel = null;
+  const mainContent = document.getElementById('main-content');
+  
+  const titles = {
+    unassigned: '📂 Unassigned Videos',
+    assigned: '📝 Assigned Videos',
+    done: '✅ Done Videos'
+  };
+
+  mainContent.innerHTML = `
+    <div class="fade-in">
+      <button class="back-btn" id="btn-back-channels">← Back to Channels</button>
+
+      <div class="page-header">
+        <div>
+          <h1>${titles[filterType] || 'All Videos'}</h1>
+          <p class="subtitle">Global list of videos across all channels (${currentSection})</p>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="filter-bar">
+        <div class="search-box" style="flex:1;max-width:400px">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="global-video-search" placeholder="Search across all channels..." />
+        </div>
+      </div>
+
+      <!-- Videos List -->
+      <div id="global-videos-list">
+        <div class="skeleton" style="height:120px;margin-bottom:8px;border-radius:var(--radius-lg)"></div>
+        <div class="skeleton" style="height:120px;border-radius:var(--radius-lg)"></div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('btn-back-channels')?.addEventListener('click', () => renderChannelsList(userProfile));
+  
+  const searchInput = document.getElementById('global-video-search');
+  searchInput?.addEventListener('input', debounce(() => {
+    loadGlobalVideosData(userProfile, filterType, searchInput.value);
+  }, 300));
+
+  await loadGlobalVideosData(userProfile, filterType);
+}
+
+async function loadGlobalVideosData(userProfile, filterType, search = '') {
+  const container = document.getElementById('global-videos-list');
+  try {
+    const options = { section: currentSection, search };
+    if (filterType === 'unassigned') options.unassigned = true;
+    if (filterType === 'assigned') options.unassigned = false;
+
+    let videos = await ChannelsService.getVideos(null, options);
+
+    // Manual filtering for complex buckets
+    if (filterType === 'in-progress') {
+      videos = videos.filter(v => ['scripting', 'recording', 'editing'].includes(v.status));
+    }
+    if (filterType === 'published') {
+      videos = videos.filter(v => v.status === 'published');
+    }
+    if (filterType === 'assigned') {
+      videos = videos.filter(v => v.status !== 'published' && v.status !== 'done' && v.status !== 'uploaded');
+    }
+    if (filterType === 'done') {
+      videos = videos.filter(v => v.status === 'published' || v.status === 'done');
+    }
+
+    renderGlobalVideosGrid(videos, userProfile, container);
+  } catch (err) {
+    console.error('Global videos error:', err);
+    showToast('Failed to load global videos', 'error');
+  }
+}
+
+function renderGlobalVideosGrid(videos, userProfile, container) {
+  if (!videos.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">🎬</div>
+        <h3>No videos found</h3>
+        <p>Try a different search or filter!</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = videos.map(vid => {
+    const st = VIDEO_STATUSES[vid.status] || VIDEO_STATUSES.draft;
+    const assignee = vid.assigned_profile;
+    const channelName = vid.yt_channels?.name || 'Unknown Channel';
+    
+    return `
+      <div class="item-card">
+        <div class="item-card-header">
+          <div>
+            <div style="font-size:var(--font-xs);color:var(--primary);font-weight:600;margin-bottom:4px">📺 ${sanitize(channelName)}</div>
+            <div class="item-card-title">${sanitize(vid.title)}</div>
+            <div class="item-card-meta">
+              <span class="badge ${st.class}">${st.icon} ${st.label}</span>
+              ${assignee ? `
+                <span style="display:flex;align-items:center;gap:4px">
+                  <span class="avatar avatar-xs" style="background:${getAvatarColor(assignee.full_name)};width:20px;height:20px;font-size:8px;background-image:url(${assignee.avatar_url || ''});background-size:cover">${assignee.avatar_url ? '' : getInitials(assignee.full_name)}</span>
+                  ${assignee.full_name}
+                </span>
+              ` : '<span style="color:var(--text-danger)">⚠️ Unassigned</span>'}
+              <span>📅 ${timeAgo(vid.created_at)}</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:4px">
+            <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); window.openVideoInChannel('${vid.channel_id}', '${vid.id}')">👁️ Go to Channel</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Helper to bridge global list to channel view
+window.openVideoInChannel = async (channelId, videoId) => {
+  if (!moduleUserProfile) {
+    showToast('Session error, please refresh', 'error');
+    return;
+  }
+  
+  // Transition to channel view
+  await openChannelVideos(channelId, moduleUserProfile);
+  
+  // Optional: Scroll to or highlight the specific video if needed
+  // For now, just opening the channel is what was requested.
+  showToast('Channel opened', 'success');
+};

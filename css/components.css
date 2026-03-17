@@ -150,6 +150,18 @@
 .stat-card.green::before { background: var(--success); }
 .stat-card.red::before { background: var(--danger); }
 .stat-card.blue::before { background: var(--info); }
+.stat-card.pink::before { background: #fd79a8; }
+.stat-card.indigo::before { background: #6c5ce7; }
+
+.stat-card.clickable {
+  cursor: pointer;
+}
+
+.stat-card.clickable:hover {
+  box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+  transform: translateY(-4px);
+  border-color: var(--primary-light);
+}
 
 .stat-card:hover {
   box-shadow: var(--shadow-md);
@@ -173,6 +185,8 @@
 .stat-card.green .stat-icon { background: rgba(0, 184, 148, 0.12); color: var(--success); }
 .stat-card.red .stat-icon { background: rgba(225, 112, 85, 0.12); color: var(--danger); }
 .stat-card.blue .stat-icon { background: rgba(116, 185, 255, 0.12); color: var(--info); }
+.stat-card.pink .stat-icon { background: rgba(253, 121, 168, 0.12); color: #fd79a8; }
+.stat-card.indigo .stat-icon { background: rgba(108, 92, 231, 0.12); color: #6c5ce7; }
 
 .stat-card .stat-info {
   flex: 1;

@@ -70,16 +70,30 @@ export const TasksService = {
 
   // Get task counts by status
   async getTaskStats(category) {
-    let query = supabase.from('tasks').select('status');
+    let query = supabase.from('tasks').select('status, assigned_to');
     if (category) query = query.eq('category', category);
 
     const { data, error } = await query;
     if (error) throw error;
 
-    const stats = { total: 0, pending: 0, in_progress: 0, review: 0, completed: 0 };
+    const stats = { total: 0, unassigned: 0, assigned: 0, done: 0, pending: 0, in_progress: 0, review: 0, completed: 0 };
     (data || []).forEach(t => {
       stats.total++;
-      if (stats[t.status] !== undefined) stats[t.status]++;
+      if (stats[t.status] !== undefined && t.status !== 'done') stats[t.status]++;
+
+      if (!t.assigned_to) {
+        stats.unassigned++;
+      } else {
+        // Only count as 'assigned' if it's NOT finished
+        if (t.status !== 'completed' && t.status !== 'done') {
+          stats.assigned++;
+        }
+      }
+
+      // Summary 'Done' (Completed OR explicit Done status)
+      if (t.status === 'completed' || t.status === 'done') {
+        stats.done++;
+      }
     });
     return stats;
   }

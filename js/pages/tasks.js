@@ -10,7 +10,8 @@ const TASK_STATUSES = {
   pending:     { label: 'Pending',     icon: '⏳', class: 'badge-info' },
   in_progress: { label: 'In Progress', icon: '🔄', class: 'badge-warning' },
   review:      { label: 'In Review',   icon: '👁️', class: 'badge-primary' },
-  completed:   { label: 'Completed',   icon: '✅', class: 'badge-success' }
+  completed:   { label: 'Completed',   icon: '✅', class: 'badge-success' },
+  done:        { label: 'Done',        icon: '✅', class: 'badge-success' }
 };
 
 const PRIORITY_INFO = {
@@ -43,11 +44,32 @@ export async function renderTasksPage(userProfile) {
             <div class="stat-value" id="tasks-count-total">—</div>
           </div>
         </div>
-        <div class="stat-card orange">
+        <div class="stat-card orange clickable" data-tfilter="active">
           <div class="stat-icon">🔄</div>
           <div class="stat-info">
             <div class="stat-label">In Progress</div>
             <div class="stat-value" id="tasks-count-active">—</div>
+          </div>
+        </div>
+        <div class="stat-card pink clickable" data-tfilter="unassigned">
+          <div class="stat-icon">👤</div>
+          <div class="stat-info">
+            <div class="stat-label">Unassigned</div>
+            <div class="stat-value" id="tasks-count-unassigned">—</div>
+          </div>
+        </div>
+        <div class="stat-card indigo clickable" data-tfilter="assigned">
+          <div class="stat-icon">📋</div>
+          <div class="stat-info">
+            <div class="stat-label">Assigned</div>
+            <div class="stat-value" id="tasks-count-assigned">—</div>
+          </div>
+        </div>
+        <div class="stat-card teal clickable" data-tfilter="done">
+          <div class="stat-icon">✅</div>
+          <div class="stat-info">
+            <div class="stat-label">Done Tasks</div>
+            <div class="stat-value" id="tasks-count-done">—</div>
           </div>
         </div>
       </div>
@@ -62,7 +84,8 @@ export async function renderTasksPage(userProfile) {
           <button class="filter-chip active" data-status="all">All</button>
           <button class="filter-chip" data-status="pending">⏳ Pending</button>
           <button class="filter-chip" data-status="in_progress">🔄 Active</button>
-          <button class="filter-chip" data-status="completed">✅ Done</button>
+          <button class="filter-chip" data-status="completed">✅ Completed</button>
+          <button class="filter-chip" data-status="done">✅ Done</button>
         </div>
       </div>
 
@@ -104,6 +127,7 @@ export async function renderTasksPage(userProfile) {
                 <option value="in_progress">🔄 In Progress</option>
                 <option value="review">👁️ In Review</option>
                 <option value="completed">✅ Completed</option>
+                <option value="done">✅ Done</option>
               </select>
             </div>
           </div>
@@ -136,19 +160,26 @@ export async function renderTasksPage(userProfile) {
 
 async function loadTasksData(userProfile, statusFilter = 'all', search = '') {
   try {
+    const stats = await TasksService.getTaskStats();
     allTasks = await TasksService.getTasks({
       status: statusFilter,
       search: search
     });
-    
-    // Update stats
-    const stats = { total: allTasks.length, active: 0 };
-    allTasks.forEach(t => {
-      if (t.status !== 'completed') stats.active++;
-    });
+
+    // Handle special dashboard filters (Unassigned, Assigned, Done)
+    if (statusFilter === 'unassigned') {
+      allTasks = allTasks.filter(t => !t.assigned_to);
+    } else if (statusFilter === 'assigned') {
+      allTasks = allTasks.filter(t => t.assigned_to && t.status !== 'completed' && t.status !== 'done');
+    } else if (statusFilter === 'done') {
+      allTasks = allTasks.filter(t => t.status === 'completed' || t.status === 'done');
+    }
     
     document.getElementById('tasks-count-total').textContent = stats.total;
     document.getElementById('tasks-count-active').textContent = stats.active;
+    document.getElementById('tasks-count-unassigned').textContent = stats.unassigned;
+    document.getElementById('tasks-count-assigned').textContent = stats.assigned;
+    document.getElementById('tasks-count-done').textContent = stats.done;
 
     renderTasksList(allTasks, userProfile);
   } catch (err) {
@@ -233,6 +264,21 @@ function initTaskEvents(userProfile) {
     const status = document.querySelector('[data-status].active')?.dataset.status || 'all';
     loadTasksData(userProfile, status, e.target.value);
   }, 300));
+
+  // Stat Card Filtering
+  document.querySelectorAll('[data-tfilter]').forEach(card => {
+    card.addEventListener('click', () => {
+      const filter = card.dataset.tfilter;
+      // Sync with status chips if possible, or just load
+      loadTasksData(userProfile, filter);
+      // Optional: Update chip active state
+      document.querySelectorAll('[data-status]').forEach(c => c.classList.remove('active'));
+      if (filter === 'done') document.querySelector('[data-status="completed"]')?.classList.add('active');
+      else if (['pending', 'in_progress', 'completed'].includes(filter)) {
+        document.querySelector(`[data-status="${filter}"]`)?.classList.add('active');
+      }
+    });
+  });
 
   document.getElementById('task-modal-close')?.addEventListener('click', () => closeModal());
   document.getElementById('task-cancel')?.addEventListener('click', () => closeModal());

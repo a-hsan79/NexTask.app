@@ -60,14 +60,17 @@ export const ProjectsService = {
 
   // === ORDERS ===
 
-  async getOrders(projectId, { status, search } = {}) {
+  async getOrders(projectId, { status, search, unassigned } = {}) {
     let query = supabase
       .from('freelance_orders')
-      .select('*, assigned_profile:profiles!freelance_orders_assigned_to_fkey(full_name, role), creator:profiles!freelance_orders_created_by_fkey(full_name)')
-      .eq('project_id', projectId)
+      .select('*, assigned_profile:profiles!freelance_orders_assigned_to_fkey(full_name, role), creator:profiles!freelance_orders_created_by_fkey(full_name), freelance_projects!inner(name)')
       .order('created_at', { ascending: false });
 
+    if (projectId) query = query.eq('project_id', projectId);
     if (status && status !== 'all') query = query.eq('status', status);
+    if (unassigned) query = query.is('assigned_to', null);
+    else if (unassigned === false) query = query.not('assigned_to', 'is', null);
+
     if (search) query = query.ilike('title', `%${search}%`);
 
     const { data, error } = await query;
@@ -101,25 +104,51 @@ export const ProjectsService = {
     if (error) throw error;
   },
 
-  // Get order count per project
+  // Get order count and completion status per project
   async getProjectOrderCount(projectId) {
-    const { count, error } = await supabase
+    const { data, error } = await supabase
       .from('freelance_orders')
-      .select('*', { count: 'exact', head: true })
+      .select('status')
       .eq('project_id', projectId);
-    if (error) return 0;
-    return count || 0;
+    
+    if (error) return { total: 0, done: 0 };
+    
+    const total = data.length;
+    const done = data.filter(o => o.status === 'completed' || o.status === 'done').length;
+    
+    return { total, done };
   },
 
   // Get all order stats
   async getAllOrderStats() {
-    const { data, error } = await supabase.from('freelance_orders').select('status, amount');
+    const { data, error } = await supabase.from('freelance_orders').select('status, amount, assigned_to');
     if (error) throw error;
-    const stats = { total: 0, new: 0, in_progress: 0, delivered: 0, completed: 0, revision: 0, cancelled: 0, totalRevenue: 0 };
+    const stats = { 
+      total: 0, 
+      unassigned: 0, 
+      assigned: 0, 
+      done: 0,
+      new: 0, in_progress: 0, delivered: 0, completed: 0, revision: 0, cancelled: 0, totalRevenue: 0 
+    };
+    
     (data || []).forEach(o => {
       stats.total++;
-      if (stats[o.status] !== undefined) stats[o.status]++;
+      if (stats[o.status] !== undefined && o.status !== 'done') stats[o.status]++;
       if (o.status !== 'cancelled') stats.totalRevenue += (o.amount || 0);
+      
+      if (!o.assigned_to) {
+        stats.unassigned++;
+      } else {
+        // Only count as 'assigned' if it's NOT finished or cancelled
+        if (o.status !== 'completed' && o.status !== 'done' && o.status !== 'cancelled') {
+          stats.assigned++;
+        }
+      }
+      
+      // Summary 'Done' (Completed OR explicit Done status)
+      if (o.status === 'completed' || o.status === 'done') {
+        stats.done++;
+      }
     });
     return stats;
   }

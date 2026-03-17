@@ -102,6 +102,47 @@
   padding: 2px;
 }
 
+/* ---- Completion Badge ---- */
+.completion-badge, .uploaded-badge {
+  position: absolute;
+  top: 12px;
+  background: var(--success);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 4px 10px rgba(0, 184, 148, 0.4);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  animation: bounceIn 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.completion-badge:hover, .uploaded-badge:hover {
+  transform: scale(1.1);
+}
+
+.completion-badge {
+  left: 12px;
+}
+
+.uploaded-badge {
+  right: 12px;
+  background: var(--info, #0984e3);
+  box-shadow: 0 4px 10px rgba(9, 132, 227, 0.4);
+}
+
+@keyframes bounceIn {
+  from { opacity: 0; transform: scale(0.3); }
+  to { opacity: 1; transform: scale(1); }
+}
+
 .project-card:hover .project-card-actions {
   opacity: 1;
 }

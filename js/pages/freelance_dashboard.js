@@ -11,6 +11,7 @@ let allProjects = [];
 let allOrders = [];
 let teamMembers = [];
 let currentProject = null;
+let moduleUserProfile = null; // New global reference
 
 const ORDER_STATUSES = {
   new:         { label: 'New',        icon: '🆕', class: 'badge-info' },
@@ -18,7 +19,8 @@ const ORDER_STATUSES = {
   delivered:   { label: 'Delivered',  icon: '📦', class: 'badge-primary' },
   completed:   { label: 'Completed', icon: '✅', class: 'badge-success' },
   revision:    { label: 'Revision',   icon: '🔁', class: 'badge-warning' },
-  cancelled:   { label: 'Cancelled', icon: '❌', class: 'badge-danger' }
+  cancelled:   { label: 'Cancelled', icon: '❌', class: 'badge-danger' },
+  done:        { label: 'Done',      icon: '✅', class: 'badge-success' }
 };
 
 const PLATFORM_INFO = {
@@ -28,6 +30,7 @@ const PLATFORM_INFO = {
 };
 
 export async function renderFreelanceDashboardPage(userProfile) {
+  moduleUserProfile = userProfile;
   currentProject = null;
   teamMembers = await TeamService.getMemberOptions();
   await renderProjectsList(userProfile);
@@ -53,32 +56,53 @@ async function renderProjectsList(userProfile) {
 
       <!-- Stats -->
       <div class="dashboard-stats">
-        <div class="stat-card purple">
+        <div class="stat-card purple clickable" id="stat-fl-projects">
           <div class="stat-icon">📁</div>
           <div class="stat-info">
             <div class="stat-label">Projects</div>
             <div class="stat-value" id="fl-projects-count">—</div>
           </div>
         </div>
-        <div class="stat-card blue">
+        <div class="stat-card blue clickable" id="stat-fl-total">
           <div class="stat-icon">📦</div>
           <div class="stat-info">
             <div class="stat-label">Total Orders</div>
             <div class="stat-value" id="fl-orders-count">—</div>
           </div>
         </div>
-        <div class="stat-card orange">
+        <div class="stat-card orange clickable" id="stat-fl-active">
           <div class="stat-icon">🔄</div>
           <div class="stat-info">
             <div class="stat-label">Active</div>
             <div class="stat-value" id="fl-active">—</div>
           </div>
         </div>
-        <div class="stat-card green">
+        <div class="stat-card green clickable" id="stat-fl-revenue">
           <div class="stat-icon">💰</div>
           <div class="stat-info">
             <div class="stat-label">Revenue</div>
             <div class="stat-value" id="fl-revenue">—</div>
+          </div>
+        </div>
+        <div class="stat-card pink clickable" id="stat-fl-unassigned">
+          <div class="stat-icon">👤</div>
+          <div class="stat-info">
+            <div class="stat-label">Unassigned</div>
+            <div class="stat-value" id="fl-unassigned">—</div>
+          </div>
+        </div>
+        <div class="stat-card indigo clickable" id="stat-fl-assigned">
+          <div class="stat-icon">🔄</div>
+          <div class="stat-info">
+            <div class="stat-label">Assigned</div>
+            <div class="stat-value" id="fl-assigned">—</div>
+          </div>
+        </div>
+        <div class="stat-card teal clickable" id="stat-fl-done">
+          <div class="stat-icon">✅</div>
+          <div class="stat-info">
+            <div class="stat-label">Done Orders</div>
+            <div class="stat-value" id="fl-done">—</div>
           </div>
         </div>
       </div>
@@ -169,6 +193,9 @@ async function loadProjectsData(userProfile, platformFilter = 'all', search = ''
     document.getElementById('fl-orders-count').textContent = stats.total;
     document.getElementById('fl-active').textContent = stats.new + stats.in_progress + stats.revision;
     document.getElementById('fl-revenue').textContent = formatCurrency(stats.totalRevenue);
+    document.getElementById('fl-unassigned').textContent = stats.unassigned;
+    document.getElementById('fl-assigned').textContent = stats.assigned;
+    document.getElementById('fl-done').textContent = stats.done;
 
     renderProjectsGrid(allProjects, userProfile);
   } catch (err) {
@@ -205,6 +232,7 @@ async function renderProjectsGrid(projects, userProfile) {
           ${canDelete ? `<button class="btn btn-ghost btn-sm" data-delete-project="${proj.id}">🗑️</button>` : ''}
         </div>
         <div class="project-card-header">
+          ${counts[i].total > 0 && counts[i].total === counts[i].done ? `<div class="completion-badge clickable" data-open-status="done">✅ DONE</div>` : ''}
           <div class="project-card-icon" style="background:rgba(${proj.platform === 'fiverr' ? '27,190,66' : proj.platform === 'upwork' ? '20,163,0' : '116,185,255'},0.15)">
             ${plat.icon}
           </div>
@@ -218,15 +246,24 @@ async function renderProjectsGrid(projects, userProfile) {
         </div>
         ${proj.description ? `<p style="font-size:var(--font-xs);color:var(--text-muted);margin-bottom:var(--space-md)">${sanitize(proj.description).slice(0, 80)}</p>` : ''}
         <div class="project-card-stats">
-          <div class="project-card-stat"><strong>${counts[i]}</strong> orders</div>
+          <div class="project-card-stat"><strong>${counts[i].total}</strong> orders</div>
           <div class="project-card-stat">Created ${timeAgo(proj.created_at)}</div>
         </div>
       </div>
     `;
   }).join('');
 
+  // Click project card → open orders view
   grid.querySelectorAll('[data-project-id]').forEach(card => {
     card.addEventListener('click', (e) => {
+      // Check for status badge clicks
+      const statusBadge = e.target.closest('[data-open-status]');
+      if (statusBadge) {
+        e.stopPropagation();
+        openProjectOrders(card.dataset.projectId, userProfile, statusBadge.dataset.openStatus);
+        return;
+      }
+
       if (e.target.closest('[data-edit-project]') || e.target.closest('[data-delete-project]')) return;
       openProjectOrders(card.dataset.projectId, userProfile);
     });
@@ -267,6 +304,17 @@ function initProjectEvents(userProfile) {
     e.preventDefault();
     await saveProject(userProfile);
   });
+
+  // Global Stats Click
+  document.getElementById('stat-fl-projects')?.addEventListener('click', () => {
+    document.getElementById('projects-grid')?.scrollIntoView({ behavior: 'smooth' });
+  });
+  document.getElementById('stat-fl-total')?.addEventListener('click', () => renderGlobalOrders(userProfile, 'all'));
+  document.getElementById('stat-fl-active')?.addEventListener('click', () => renderGlobalOrders(userProfile, 'active'));
+  document.getElementById('stat-fl-revenue')?.addEventListener('click', () => renderGlobalOrders(userProfile, 'done'));
+  document.getElementById('stat-fl-unassigned')?.addEventListener('click', () => renderGlobalOrders(userProfile, 'unassigned'));
+  document.getElementById('stat-fl-assigned')?.addEventListener('click', () => renderGlobalOrders(userProfile, 'assigned'));
+  document.getElementById('stat-fl-done')?.addEventListener('click', () => renderGlobalOrders(userProfile, 'done'));
 }
 
 function openNewProject() {
@@ -349,7 +397,7 @@ async function deleteProject(projectId, userProfile) {
 // ORDERS VIEW (inside a project)
 // ===========================
 
-async function openProjectOrders(projectId, userProfile) {
+async function openProjectOrders(projectId, userProfile, initialStatus = 'all') {
   const project = allProjects.find(p => p.id === projectId);
   if (!project) return;
   currentProject = project;
@@ -379,9 +427,10 @@ async function openProjectOrders(projectId, userProfile) {
         <div class="filter-chips">
           <button class="filter-chip active" data-ostatus="all">All</button>
           <button class="filter-chip" data-ostatus="new">🆕 New</button>
-          <button class="filter-chip" data-ostatus="in_progress">🔄 Active</button>
           <button class="filter-chip" data-ostatus="delivered">📦 Delivered</button>
-          <button class="filter-chip" data-ostatus="completed">✅ Done</button>
+          <button class="filter-chip" data-ostatus="completed">✅ Completed</button>
+          <button class="filter-chip" data-ostatus="done">✅ Done</button>
+          <button class="filter-chip" data-ostatus="revision">🔁 Revision</button>
         </div>
       </div>
 
@@ -449,6 +498,7 @@ async function openProjectOrders(projectId, userProfile) {
               <option value="in_progress">🔄 In Progress</option>
               <option value="delivered">📦 Delivered</option>
               <option value="completed">✅ Completed</option>
+              <option value="done">✅ Done</option>
               <option value="revision">🔁 Revision</option>
               <option value="cancelled">❌ Cancelled</option>
             </select>
@@ -466,8 +516,15 @@ async function openProjectOrders(projectId, userProfile) {
     </div>
   `;
 
-  await loadOrdersData(userProfile);
+  await loadOrdersData(userProfile, initialStatus);
   initOrderEvents(userProfile);
+
+  // If initialStatus is not 'all', manually activate the chip
+  if (initialStatus !== 'all') {
+    document.querySelectorAll('[data-ostatus]').forEach(c => {
+      c.classList.toggle('active', c.dataset.ostatus === initialStatus);
+    });
+  }
 }
 
 async function loadOrdersData(userProfile, statusFilter = 'all', search = '') {
@@ -686,3 +743,137 @@ async function deleteOrder(orderId, userProfile) {
 function closeModal(id) {
   document.getElementById(id)?.classList.remove('active');
 }
+
+// ===========================
+// GLOBAL ORDERS VIEW (Flat List)
+// ===========================
+
+async function renderGlobalOrders(userProfile, filterType) {
+  currentProject = null;
+  const mainContent = document.getElementById('main-content');
+  
+  const titles = {
+    unassigned: '📂 Unassigned Orders',
+    assigned: '🔄 Assigned Active Orders',
+    done: '✅ Done Orders'
+  };
+
+  mainContent.innerHTML = `
+    <div class="fade-in">
+      <button class="back-btn" id="btn-back-projects">← Back to Projects</button>
+
+      <div class="page-header">
+        <div>
+          <h1>${titles[filterType] || 'All Orders'}</h1>
+          <p class="subtitle">Global list of orders across all projects</p>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="filter-bar">
+        <div class="search-box" style="flex:1;max-width:400px">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="global-order-search" placeholder="Search across all projects..." />
+        </div>
+      </div>
+
+      <!-- Orders List -->
+      <div id="global-orders-list">
+        <div class="skeleton" style="height:120px;margin-bottom:8px;border-radius:var(--radius-lg)"></div>
+        <div class="skeleton" style="height:120px;border-radius:var(--radius-lg)"></div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('btn-back-projects')?.addEventListener('click', () => renderProjectsList(userProfile));
+  
+  const searchInput = document.getElementById('global-order-search');
+  searchInput?.addEventListener('input', debounce(() => {
+    loadGlobalOrdersData(userProfile, filterType, searchInput.value);
+  }, 300));
+
+  await loadGlobalOrdersData(userProfile, filterType);
+}
+
+async function loadGlobalOrdersData(userProfile, filterType, search = '') {
+  const container = document.getElementById('global-orders-list');
+  try {
+    const options = { search };
+    if (filterType === 'unassigned') options.unassigned = true;
+    if (filterType === 'assigned') options.unassigned = false;
+    // If filter is 'done', we fetch all and filter in JS to get both completed and done
+
+    let orders = await ProjectsService.getOrders(null, options);
+
+    // Manual filtering for complex buckets
+    if (filterType === 'active') {
+      orders = orders.filter(o => ['new', 'in_progress', 'revision'].includes(o.status));
+    }
+    if (filterType === 'assigned') {
+      orders = orders.filter(o => o.status !== 'completed' && o.status !== 'done' && o.status !== 'cancelled');
+    }
+    if (filterType === 'done') {
+      orders = orders.filter(o => o.status === 'completed' || o.status === 'done');
+    }
+
+    renderGlobalOrdersGrid(orders, userProfile, container);
+  } catch (err) {
+    console.error('Global orders error:', err);
+    showToast('Failed to load global orders', 'error');
+  }
+}
+
+function renderGlobalOrdersGrid(orders, userProfile, container) {
+  if (!orders.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">📦</div>
+        <h3>No orders found</h3>
+        <p>Try a different search or filter!</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = orders.map(ord => {
+    const st = ORDER_STATUSES[ord.status] || ORDER_STATUSES.new;
+    const assignee = ord.assigned_profile;
+    const projectName = ord.freelance_projects?.name || 'Unknown Project';
+    
+    return `
+      <div class="item-card">
+        <div class="item-card-header">
+          <div>
+            <div style="font-size:var(--font-xs);color:var(--primary);font-weight:600;margin-bottom:4px">📁 ${sanitize(projectName)}</div>
+            <div class="item-card-title">${sanitize(ord.title)}</div>
+            <div class="item-card-meta">
+              <span class="badge ${st.class}">${st.icon} ${st.label}</span>
+              <span style="font-weight:600">${formatCurrency(ord.amount, ord.currency || 'PKR')}</span>
+              ${assignee ? `
+                <span style="display:flex;align-items:center;gap:4px">
+                  <span class="avatar avatar-xs" style="background:${getAvatarColor(assignee.full_name)};width:20px;height:20px;font-size:8px;background-image:url(${assignee.avatar_url || ''});background-size:cover">${assignee.avatar_url ? '' : getInitials(assignee.full_name)}</span>
+                  ${assignee.full_name}
+                </span>
+              ` : '<span style="color:var(--text-danger)">⚠️ Unassigned</span>'}
+              <span>📅 ${timeAgo(ord.created_at)}</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:4px">
+            <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); window.openProjectOrdersGlobal('${ord.project_id}')">👁️ View Project</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Helper to bridge global list to project view
+window.openProjectOrdersGlobal = async (projectId) => {
+  if (!moduleUserProfile) {
+    showToast('Session error, please refresh', 'error');
+    return;
+  }
+  
+  await openProjectOrders(projectId, moduleUserProfile);
+  showToast('Project opened', 'success');
+};
