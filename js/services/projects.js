@@ -123,12 +123,9 @@ export const ProjectsService = {
   async getAllOrderStats(userProfile = null) {
     const { data, error } = await supabase
       .from('freelance_orders')
-      .select('status, amount, assigned_to, created_by, freelance_projects!inner(is_public)');
+      .select('status, amount, assigned_to, created_by, freelance_projects!inner(id)');
       
     if (error) throw error;
-
-    const role = userProfile?.role;
-    const isPowerUser = ['owner', 'admin', 'manager'].includes(role);
 
     const stats = { 
       total: 0, unassigned: 0, assigned: 0, done: 0,
@@ -136,14 +133,6 @@ export const ProjectsService = {
     };
     
     (data || []).forEach(o => {
-      // Visibility Check: Power users see all. Others see Public OR assigned.
-      if (!isPowerUser && userProfile) {
-        const canSee = o.freelance_projects?.is_public === true || 
-                       o.assigned_to === userProfile.id || 
-                       o.created_by === userProfile.id;
-        if (!canSee) return;
-      }
-
       stats.total++;
       if (stats[o.status] !== undefined && o.status !== 'done') stats[o.status]++;
       if (o.status !== 'cancelled') stats.totalRevenue += (o.amount || 0);

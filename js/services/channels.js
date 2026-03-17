@@ -123,15 +123,12 @@ export const ChannelsService = {
   async getAllVideoStats(section = 'automation', userProfile = null) {
     let query = supabase
       .from('yt_videos')
-      .select('status, assigned_to, created_by, yt_channels!inner(section, is_public)');
+      .select('status, assigned_to, created_by, yt_channels!inner(section)');
       
     if (section) query = query.eq('yt_channels.section', section);
 
     const { data, error } = await query;
     if (error) throw error;
-
-    const role = userProfile?.role;
-    const isPowerUser = ['owner', 'admin', 'manager'].includes(role);
 
     const stats = { 
       total: 0, unassigned: 0, assigned: 0, done: 0,
@@ -139,14 +136,6 @@ export const ChannelsService = {
     };
     
     (data || []).forEach(v => {
-      // Visibility Check: Power users see all. Others see Public OR assigned.
-      if (!isPowerUser && userProfile) {
-        const canSee = v.yt_channels?.is_public === true || 
-                       v.assigned_to === userProfile.id || 
-                       v.created_by === userProfile.id;
-        if (!canSee) return;
-      }
-
       stats.total++;
       if (v.status === 'draft') stats.draft++;
       else if (v.status === 'scripting') stats.scripting++;

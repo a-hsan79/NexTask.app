@@ -206,7 +206,7 @@ async function loadProjectsData(userProfile, platformFilter = 'all', search = ''
       platform: platformFilter !== 'all' ? platformFilter : undefined,
       search: search || undefined
     });
-    const stats = await ProjectsService.getAllOrderStats();
+    const stats = await ProjectsService.getAllOrderStats(userProfile);
 
     // Visibility Filtering for non-admins
     const role = userProfile.role;

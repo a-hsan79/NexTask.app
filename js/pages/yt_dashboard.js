@@ -187,7 +187,7 @@ async function loadChannelsData(userProfile, search = '') {
 
   try {
     allChannels = await ChannelsService.getChannels(currentSection);
-    const stats = await ChannelsService.getAllVideoStats(currentSection);
+    const stats = await ChannelsService.getAllVideoStats(currentSection, userProfile);
 
     // Visibility Filtering for non-admins
     const role = userProfile.role;
