@@ -96,5 +96,16 @@ export const TasksService = {
       }
     });
     return stats;
+  },
+
+  // === REAL-TIME SUBSCRIPTIONS ===
+
+  subscribeToTasks(callback) {
+    return supabase
+      .channel('public:tasks')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, (payload) => {
+        callback(payload);
+      })
+      .subscribe();
   }
 };

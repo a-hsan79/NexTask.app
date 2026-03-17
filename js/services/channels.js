@@ -160,5 +160,31 @@ export const ChannelsService = {
       }
     });
     return stats;
-}
+  },
+
+  // === REAL-TIME SUBSCRIPTIONS ===
+
+  subscribeToChannels(callback) {
+    return supabase
+      .channel('public:yt_channels')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'yt_channels' }, (payload) => {
+        callback(payload);
+      })
+      .subscribe();
+  },
+
+  subscribeToVideos(channelId, callback) {
+    const filter = channelId ? `channel_id=eq.${channelId}` : undefined;
+    return supabase
+      .channel(`public:yt_videos:${channelId || 'all'}`)
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'yt_videos',
+        filter: filter
+      }, (payload) => {
+        callback(payload);
+      })
+      .subscribe();
+  }
 };

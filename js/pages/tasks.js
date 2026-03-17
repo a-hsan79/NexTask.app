@@ -2,6 +2,7 @@ import { TasksService } from '../services/tasks.js';
 import { TeamService } from '../services/team.js';
 import { hasPermission } from '../utils/permissions.js';
 import { getInitials, getAvatarColor, showToast, sanitize, timeAgo, formatDate, debounce, showConfirmModal } from '../utils/helpers.js';
+import { addSubscription } from '../app.js';
 
 let allTasks = [];
 let teamMembers = [];
@@ -156,6 +157,15 @@ export async function renderTasksPage(userProfile) {
 
   await loadTasksData(userProfile);
   initTaskEvents(userProfile);
+
+  // Real-time subscription for tasks
+  const taskSub = TasksService.subscribeToTasks(() => {
+    console.log('Real-time update: Tasks changed');
+    const activeStatus = document.querySelector('[data-status].active')?.dataset.status || 'all';
+    const search = document.getElementById('task-search')?.value || '';
+    loadTasksData(userProfile, activeStatus, search);
+  });
+  addSubscription(taskSub);
 }
 
 async function loadTasksData(userProfile, statusFilter = 'all', search = '') {

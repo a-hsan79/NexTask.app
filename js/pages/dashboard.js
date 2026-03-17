@@ -5,6 +5,10 @@
 import { supabase } from '../services/supabase.js';
 import { canAccessPage, hasPermission } from '../utils/permissions.js';
 import { formatCurrency, timeAgo, getStatusInfo, getInitials, getAvatarColor, showToast } from '../utils/helpers.js';
+import { addSubscription } from '../app.js';
+import { ChannelsService } from '../services/channels.js';
+import { ProjectsService } from '../services/projects.js';
+import { TasksService } from '../services/tasks.js';
 
 export async function renderDashboardPage(userProfile) {
   const mainContent = document.getElementById('main-content');
@@ -144,6 +148,37 @@ export async function renderDashboardPage(userProfile) {
   // Load data
   await loadDashboardData(userProfile);
   initDashboardEvents();
+
+  // Dashboard Real-time: Need to listen to MULTIPLE tables for stats!
+  const taskSub = TasksService.subscribeToTasks(() => {
+    console.log('Dashboard Real-time: Tasks changed');
+    loadDashboardData(userProfile);
+  });
+  addSubscription(taskSub);
+
+  const channelSub = ChannelsService.subscribeToChannels(() => {
+    console.log('Dashboard Real-time: Channels changed');
+    loadDashboardData(userProfile);
+  });
+  addSubscription(channelSub);
+
+  const videoSub = ChannelsService.subscribeToVideos(null, () => {
+    console.log('Dashboard Real-time: Videos changed');
+    loadDashboardData(userProfile);
+  });
+  addSubscription(videoSub);
+
+  const projectSub = ProjectsService.subscribeToProjects(() => {
+    console.log('Dashboard Real-time: Projects changed');
+    loadDashboardData(userProfile);
+  });
+  addSubscription(projectSub);
+
+  const orderSub = ProjectsService.subscribeToOrders(null, () => {
+    console.log('Dashboard Real-time: Orders changed');
+    loadDashboardData(userProfile);
+  });
+  addSubscription(orderSub);
 }
 
 async function loadDashboardData(userProfile) {

@@ -6,6 +6,7 @@ import { ChannelsService } from '../services/channels.js';
 import { TeamService } from '../services/team.js';
 import { hasPermission } from '../utils/permissions.js';
 import { getInitials, getAvatarColor, showToast, sanitize, timeAgo, debounce, showConfirmModal } from '../utils/helpers.js';
+import { addSubscription } from '../app.js';
 
 let allChannels = [];
 let allVideos = [];
@@ -163,6 +164,13 @@ async function renderChannelsList(userProfile) {
 
   await loadChannelsData(userProfile);
   initChannelEvents(userProfile);
+
+  // Real-time subscription for channels
+  const channelSub = ChannelsService.subscribeToChannels(() => {
+    console.log('Real-time update: Channels list changed');
+    loadChannelsData(userProfile);
+  });
+  addSubscription(channelSub);
 }
 
 async function loadChannelsData(userProfile, search = '') {
@@ -517,6 +525,15 @@ async function openChannelVideos(channelId, userProfile, initialStatus = 'all') 
   await loadVideosData(userProfile, initialStatus);
   initVideoEvents(userProfile);
 
+  // Real-time subscription for videos in this channel
+  const videoSub = ChannelsService.subscribeToVideos(channelId, () => {
+    console.log(`Real-time update: Videos for channel ${channelId} changed`);
+    const activeStatus = document.querySelector('[data-vstatus].active')?.dataset.vstatus || 'all';
+    const search = document.getElementById('video-search')?.value || '';
+    loadVideosData(userProfile, activeStatus, search);
+  });
+  addSubscription(videoSub);
+
   // If initialStatus is not 'all', manually activate the chip
   if (initialStatus !== 'all') {
     document.querySelectorAll('[data-vstatus]').forEach(c => {
@@ -839,6 +856,14 @@ async function renderGlobalVideos(userProfile, filterType) {
   }, 300));
 
   await loadGlobalVideosData(userProfile, filterType);
+
+  // Real-time for global list: Listen to all videos in this section
+  const globalVideoSub = ChannelsService.subscribeToVideos(null, () => {
+    console.log('Real-time update: Global Videos list changed');
+    const search = document.getElementById('global-video-search')?.value || '';
+    loadGlobalVideosData(userProfile, filterType, search);
+  });
+  addSubscription(globalVideoSub);
 }
 
 async function loadGlobalVideosData(userProfile, filterType, search = '') {

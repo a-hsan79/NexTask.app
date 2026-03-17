@@ -151,5 +151,31 @@ export const ProjectsService = {
       }
     });
     return stats;
+  },
+
+  // === REAL-TIME SUBSCRIPTIONS ===
+
+  subscribeToProjects(callback) {
+    return supabase
+      .channel('public:freelance_projects')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'freelance_projects' }, (payload) => {
+        callback(payload);
+      })
+      .subscribe();
+  },
+
+  subscribeToOrders(projectId, callback) {
+    const filter = projectId ? `project_id=eq.${projectId}` : undefined;
+    return supabase
+      .channel(`public:freelance_orders:${projectId || 'all'}`)
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'freelance_orders',
+        filter: filter
+      }, (payload) => {
+        callback(payload);
+      })
+      .subscribe();
   }
 };

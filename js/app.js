@@ -22,6 +22,7 @@ let currentUser = null;
 let currentProfile = null;
 let currentPage = 'dashboard';
 let notifSubscription = null;
+let currentSubscriptions = []; // Array of active Supabase Realtime channels
 let isNavigating = false;
 
 // ===========================
@@ -287,6 +288,13 @@ function renderAppShell() {
 async function navigateTo(page, skipPushState = false) {
   if (isNavigating) return;
   isNavigating = true;
+
+  // Cleanup old page subscriptions
+  if (currentSubscriptions.length > 0) {
+    console.log(`Cleaning up ${currentSubscriptions.length} subscriptions...`);
+    currentSubscriptions.forEach(sub => sub.unsubscribe());
+    currentSubscriptions = [];
+  }
 
   try {
     // Check access
@@ -562,6 +570,16 @@ async function updateBottomNavBadge() {
     badge.textContent = count;
     badge.classList.toggle('hidden', count === 0);
   }
+}
+
+// Subscription Management for pages
+export function addSubscription(channel) {
+  if (channel) currentSubscriptions.push(channel);
+}
+
+export function clearSubscriptions() {
+  currentSubscriptions.forEach(sub => sub.unsubscribe());
+  currentSubscriptions = [];
 }
 
 document.addEventListener('DOMContentLoaded', initApp);

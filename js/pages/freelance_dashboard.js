@@ -6,6 +6,7 @@ import { ProjectsService } from '../services/projects.js';
 import { TeamService } from '../services/team.js';
 import { hasPermission } from '../utils/permissions.js';
 import { formatCurrency, getInitials, getAvatarColor, showToast, sanitize, timeAgo, formatDate, debounce, showConfirmModal } from '../utils/helpers.js';
+import { addSubscription } from '../app.js';
 
 let allProjects = [];
 let allOrders = [];
@@ -179,6 +180,13 @@ async function renderProjectsList(userProfile) {
 
   await loadProjectsData(userProfile);
   initProjectEvents(userProfile);
+
+  // Real-time subscription for projects
+  const projectSub = ProjectsService.subscribeToProjects(() => {
+    console.log('Real-time update: Projects list changed');
+    loadProjectsData(userProfile);
+  });
+  addSubscription(projectSub);
 }
 
 async function loadProjectsData(userProfile, platformFilter = 'all', search = '') {
@@ -519,6 +527,15 @@ async function openProjectOrders(projectId, userProfile, initialStatus = 'all') 
   await loadOrdersData(userProfile, initialStatus);
   initOrderEvents(userProfile);
 
+  // Real-time subscription for orders in this project
+  const orderSub = ProjectsService.subscribeToOrders(projectId, () => {
+    console.log(`Real-time update: Orders for project ${projectId} changed`);
+    const activeStatus = document.querySelector('[data-ostatus].active')?.dataset.ostatus || 'all';
+    const search = document.getElementById('order-search')?.value || '';
+    loadOrdersData(userProfile, activeStatus, search);
+  });
+  addSubscription(orderSub);
+
   // If initialStatus is not 'all', manually activate the chip
   if (initialStatus !== 'all') {
     document.querySelectorAll('[data-ostatus]').forEach(c => {
@@ -793,6 +810,14 @@ async function renderGlobalOrders(userProfile, filterType) {
   }, 300));
 
   await loadGlobalOrdersData(userProfile, filterType);
+
+  // Real-time for global list: Listen to all orders
+  const globalOrderSub = ProjectsService.subscribeToOrders(null, () => {
+    console.log('Real-time update: Global Orders list changed');
+    const search = document.getElementById('global-order-search')?.value || '';
+    loadGlobalOrdersData(userProfile, filterType, search);
+  });
+  addSubscription(globalOrderSub);
 }
 
 async function loadGlobalOrdersData(userProfile, filterType, search = '') {
