@@ -405,7 +405,10 @@ async function openChannelVideos(channelId, userProfile, initialStatus = 'all') 
           <h1>📺 ${sanitize(channel.name)}</h1>
           <p class="subtitle">${channel.url ? `<a href="${sanitize(channel.url)}" target="_blank" style="color:var(--primary)">View Channel ↗</a>` : 'YouTube Channel'}</p>
         </div>
-        ${canCreate ? `<button class="btn btn-primary" id="btn-new-video">+ Add Video</button>` : ''}
+        <div style="display:flex;gap:12px;align-items:center">
+          <button class="btn btn-ghost" id="btn-yt-history">📜 Daily History</button>
+          ${canCreate ? `<button class="btn btn-primary" id="btn-new-video">+ Add Video</button>` : ''}
+        </div>
       </div>
 
       <!-- Filters -->
@@ -690,6 +693,10 @@ function initVideoEvents(userProfile) {
       v2Icon.textContent = '▼';
     }
   });
+
+  document.getElementById('btn-yt-history')?.addEventListener('click', () => {
+    openDailyHistory(currentChannel.id, userProfile);
+  });
 }
 
 function openNewVideo() {
@@ -961,3 +968,153 @@ window.openVideoInChannel = async (channelId, videoId) => {
   // For now, just opening the channel is what was requested.
   showToast('Channel opened', 'success');
 };
+
+// ===========================
+// DAILY HISTORY EXPLORER
+// ===========================
+
+async function openDailyHistory(channelId, userProfile) {
+  clearSubscriptions();
+  const mainContent = document.getElementById('main-content');
+  
+  mainContent.innerHTML = `
+    <div class="fade-in">
+      <button class="back-btn" id="btn-back-to-channel">← Back to Channel</button>
+      
+      <div class="page-header">
+        <div>
+          <h1>📜 Daily History</h1>
+          <p class="subtitle">Videos archived for ${sanitize(currentChannel.name)} (Older than 24h)</p>
+        </div>
+      </div>
+
+      <div id="history-content" class="fade-in">
+        <div class="skeleton" style="height:100px;margin-bottom:8px;border-radius:var(--radius-lg)"></div>
+        <div class="skeleton" style="height:100px;border-radius:var(--radius-lg)"></div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('btn-back-to-channel').addEventListener('click', () => {
+    openChannelVideos(channelId, userProfile);
+  });
+
+  await loadHistoryDates(channelId, userProfile);
+}
+
+async function loadHistoryDates(channelId, userProfile) {
+  const container = document.getElementById('history-content');
+  try {
+    const dates = await ChannelsService.getArchivedVideoDates(channelId);
+    
+    if (!dates.length) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">📅</div>
+          <h3>Your archive is empty</h3>
+          <p>Videos move here automatically after 24 hours.</p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="project-grid">
+        ${dates.map(date => `
+          <div class="project-card clickable" data-history-date="${date}">
+            <div class="project-card-header">
+              <div class="project-card-icon">📁</div>
+              <div>
+                <div class="project-card-title">${formatDate(date)}</div>
+                <div class="project-card-subtitle">Archives from this day</div>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+
+    container.querySelectorAll('[data-history-date]').forEach(card => {
+      card.addEventListener('click', () => {
+        renderHistoricalVideosView(channelId, card.dataset.historyDate, userProfile);
+      });
+    });
+
+  } catch (err) {
+    console.error('History dates error:', err);
+    showToast('Failed to load history', 'error');
+  }
+}
+
+async function renderHistoricalVideosView(channelId, date, userProfile) {
+  const container = document.getElementById('history-content');
+  
+  container.innerHTML = `
+    <div class="fade-in">
+      <button class="back-btn" id="btn-back-to-history" style="margin-bottom:var(--space-md)">← Back to Dates</button>
+      <div class="section-header" style="margin-bottom:var(--space-md)">
+        <h2>Videos from ${formatDate(date)}</h2>
+      </div>
+      <div id="historical-videos-list">
+        <div class="skeleton" style="height:100px;margin-bottom:8px;border-radius:var(--radius-lg)"></div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('btn-back-to-history').addEventListener('click', () => {
+    loadHistoryDates(channelId, userProfile);
+  });
+
+  try {
+    const videos = await ChannelsService.getVideos(channelId, { includeArchived: true });
+    // Filter for the specific date (YYYY-MM-DD match)
+    const dailyVideos = videos.filter(v => v.created_at.startsWith(date));
+    
+    const listContainer = document.getElementById('historical-videos-list');
+    
+    if (!dailyVideos.length) {
+      listContainer.innerHTML = `<p class="text-muted">No videos found for this date.</p>`;
+      return;
+    }
+
+    listContainer.innerHTML = dailyVideos.map(vid => {
+      const st = VIDEO_STATUSES[vid.status] || VIDEO_STATUSES.draft;
+      const assignee = vid.assigned_profile;
+      
+      return `
+        <div class="item-card">
+          <div class="item-card-header">
+            <div>
+              <div class="item-card-title">${sanitize(vid.title)}</div>
+              <div class="item-card-meta">
+                <span class="badge ${st.class}">${st.icon} ${st.label}</span>
+                ${assignee ? `
+                  <span style="display:flex;align-items:center;gap:4px">
+                    <span class="avatar avatar-xs" style="background:${getAvatarColor(assignee.full_name)};width:20px;height:20px;font-size:8px">${getInitials(assignee.full_name)}</span>
+                    ${assignee.full_name}
+                  </span>
+                ` : ''}
+                <span>📅 Created ${timeAgo(vid.created_at)}</span>
+              </div>
+            </div>
+          </div>
+          <div class="link-fields-grid">
+            ${renderLinkField('📝', 'Script', vid.script_link)}
+            ${renderLinkField('🎙️', 'Voiceover', vid.voiceover_link)}
+            ${renderLinkField('🖼️', 'Thumbnail', vid.thumbnail_link)}
+            ${renderLinkField('🔗', 'Video', vid.video_link)}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+  } catch (err) {
+    console.error('Historical videos error:', err);
+    showToast('Failed to load historical videos', 'error');
+  }
+}
+
+function formatDate(dateStr) {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+}

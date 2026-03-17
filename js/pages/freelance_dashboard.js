@@ -426,7 +426,10 @@ async function openProjectOrders(projectId, userProfile, initialStatus = 'all') 
           <h1>${plat.icon} ${sanitize(project.name)}</h1>
           <p class="subtitle">${project.client_name ? `Client: ${sanitize(project.client_name)} · ` : ''}<span class="badge ${plat.class}">${plat.label}</span></p>
         </div>
-        ${canCreate ? `<button class="btn btn-primary" id="btn-new-order">+ Add Order</button>` : ''}
+        <div style="display:flex;gap:12px;align-items:center">
+          <button class="btn btn-ghost" id="btn-fl-history">📜 Daily History</button>
+          ${canCreate ? `<button class="btn btn-primary" id="btn-new-order">+ Add Order</button>` : ''}
+        </div>
       </div>
 
       <!-- Filters -->
@@ -666,6 +669,10 @@ function initOrderEvents(userProfile) {
   document.getElementById('order-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     await saveOrder(userProfile);
+  });
+
+  document.getElementById('btn-fl-history')?.addEventListener('click', () => {
+    openDailyHistory(currentProject.id, userProfile);
   });
 }
 
@@ -908,3 +915,148 @@ window.openProjectOrdersGlobal = async (projectId) => {
   await openProjectOrders(projectId, moduleUserProfile);
   showToast('Project opened', 'success');
 };
+// ===========================
+// DAILY HISTORY EXPLORER
+// ===========================
+
+async function openDailyHistory(projectId, userProfile) {
+  clearSubscriptions();
+  const mainContent = document.getElementById('main-content');
+  const plat = PLATFORM_INFO[currentProject.platform] || PLATFORM_INFO.direct;
+  
+  mainContent.innerHTML = `
+    <div class="fade-in">
+      <button class="back-btn" id="btn-back-to-project">← Back to Project</button>
+      
+      <div class="page-header">
+        <div>
+          <h1>📜 Project History</h1>
+          <p class="subtitle">Orders archived for ${sanitize(currentProject.name)} (Older than 24h)</p>
+        </div>
+      </div>
+
+      <div id="history-content" class="fade-in">
+        <div class="skeleton" style="height:100px;margin-bottom:8px;border-radius:var(--radius-lg)"></div>
+        <div class="skeleton" style="height:100px;border-radius:var(--radius-lg)"></div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('btn-back-to-project').addEventListener('click', () => {
+    openProjectOrders(projectId, userProfile);
+  });
+
+  await loadHistoryDates(projectId, userProfile);
+}
+
+async function loadHistoryDates(projectId, userProfile) {
+  const container = document.getElementById('history-content');
+  try {
+    const dates = await ProjectsService.getArchivedOrderDates(projectId);
+    
+    if (!dates.length) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">📅</div>
+          <h3>The archives are empty</h3>
+          <p>Orders move here automatically after 24 hours.</p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="project-grid">
+        ${dates.map(date => `
+          <div class="project-card clickable" data-history-date="${date}">
+            <div class="project-card-header">
+              <div class="project-card-icon">📁</div>
+              <div>
+                <div class="project-card-title">${formatDate(date)}</div>
+                <div class="project-card-subtitle">Archives from this day</div>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+
+    container.querySelectorAll('[data-history-date]').forEach(card => {
+      card.addEventListener('click', () => {
+        renderHistoricalOrdersView(projectId, card.dataset.historyDate, userProfile);
+      });
+    });
+
+  } catch (err) {
+    console.error('History dates error:', err);
+    showToast('Failed to load history', 'error');
+  }
+}
+
+async function renderHistoricalOrdersView(projectId, date, userProfile) {
+  const container = document.getElementById('history-content');
+  
+  container.innerHTML = `
+    <div class="fade-in">
+      <button class="back-btn" id="btn-back-to-history" style="margin-bottom:var(--space-md)">← Back to Dates</button>
+      <div class="section-header" style="margin-bottom:var(--space-md)">
+        <h2>Orders from ${formatDate(date)}</h2>
+      </div>
+      <div id="historical-orders-list">
+        <div class="skeleton" style="height:100px;margin-bottom:8px;border-radius:var(--radius-lg)"></div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('btn-back-to-history').addEventListener('click', () => {
+    loadHistoryDates(projectId, userProfile);
+  });
+
+  try {
+    const orders = await ProjectsService.getOrders(projectId, { includeArchived: true });
+    // Filter for the specific date (YYYY-MM-DD match)
+    const dailyOrders = orders.filter(o => o.created_at.startsWith(date));
+    
+    const listContainer = document.getElementById('historical-orders-list');
+    
+    if (!dailyOrders.length) {
+      listContainer.innerHTML = `<p class="text-muted">No orders found for this date.</p>`;
+      return;
+    }
+
+    listContainer.innerHTML = dailyOrders.map(ord => {
+      const st = ORDER_STATUSES[ord.status] || ORDER_STATUSES.new;
+      const assignee = ord.assigned_profile;
+      
+      return `
+        <div class="item-card">
+          <div class="item-card-header">
+            <div>
+              <div class="item-card-title">${sanitize(ord.title)}</div>
+              <div class="item-card-meta">
+                <span class="badge ${st.class}">${st.icon} ${st.label}</span>
+                ${assignee ? `
+                  <span style="display:flex;align-items:center;gap:4px">
+                    <span class="avatar avatar-xs" style="background:${getAvatarColor(assignee.full_name)};width:20px;height:20px;font-size:8px">${getInitials(assignee.full_name)}</span>
+                    ${assignee.full_name}
+                  </span>
+                ` : ''}
+                <span>📅 Created ${timeAgo(ord.created_at)}</span>
+              </div>
+            </div>
+            <div style="font-weight:600;color:var(--text-main)">$${ord.amount || 0}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+  } catch (err) {
+    console.error('Historical orders error:', err);
+    showToast('Failed to load historical orders', 'error');
+  }
+}
+
+function formatDate(dateStr) {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+}

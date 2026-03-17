@@ -60,16 +60,23 @@ export const ProjectsService = {
 
   // === ORDERS ===
 
-  async getOrders(projectId, { status, search, unassigned } = {}) {
+  async getOrders(projectId, { status, search, platform, includeArchived = false } = {}) {
     let query = supabase
       .from('freelance_orders')
-      .select('*, assigned_profile:profiles!freelance_orders_assigned_to_fkey(full_name, role), creator:profiles!freelance_orders_created_by_fkey(full_name), freelance_projects!inner(name)')
+      .select('*, assigned_profile:profiles!freelance_orders_assigned_to_fkey(full_name, role), creator:profiles!freelance_orders_created_by_fkey(full_name), freelance_projects!inner(name, platform)')
       .order('created_at', { ascending: false });
+
+    // 24-Hour Archival Logic
+    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    if (includeArchived) {
+      query = query.lt('created_at', dayAgo);
+    } else {
+      query = query.gte('created_at', dayAgo);
+    }
 
     if (projectId) query = query.eq('project_id', projectId);
     if (status && status !== 'all') query = query.eq('status', status);
-    if (unassigned) query = query.is('assigned_to', null);
-    else if (unassigned === false) query = query.not('assigned_to', 'is', null);
+    if (platform && platform !== 'all') query = query.eq('freelance_projects.platform', platform);
 
     if (search) query = query.ilike('title', `%${search}%`);
 
@@ -104,12 +111,14 @@ export const ProjectsService = {
     if (error) throw error;
   },
 
-  // Get order count and completion status per project
+  // Get order count and completion status per project (Active only)
   async getProjectOrderCount(projectId) {
+    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { data, error } = await supabase
       .from('freelance_orders')
       .select('status')
-      .eq('project_id', projectId);
+      .eq('project_id', projectId)
+      .gte('created_at', dayAgo);
     
     if (error) return { total: 0, done: 0 };
     
@@ -119,9 +128,14 @@ export const ProjectsService = {
     return { total, done };
   },
 
-  // Get all order stats
+  // Get all order stats across all projects (Active only)
   async getAllOrderStats() {
-    const { data, error } = await supabase.from('freelance_orders').select('status, amount, assigned_to');
+    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { data, error } = await supabase
+      .from('freelance_orders')
+      .select('status, amount, assigned_to')
+      .gte('created_at', dayAgo);
+
     if (error) throw error;
     const stats = { 
       total: 0, 
@@ -136,22 +150,38 @@ export const ProjectsService = {
       if (stats[o.status] !== undefined && o.status !== 'done') stats[o.status]++;
       if (o.status !== 'cancelled') stats.totalRevenue += (o.amount || 0);
       
-      if (!o.assigned_to) {
-        stats.unassigned++;
-      } else {
-        // Only count as 'assigned' if it's NOT finished or cancelled
+      if (!o.assigned_to) stats.unassigned++;
+      else {
         if (o.status !== 'completed' && o.status !== 'done' && o.status !== 'cancelled') {
           stats.assigned++;
         }
       }
       
-      // Summary 'Done' (Completed OR explicit Done status)
-      if (o.status === 'completed' || o.status === 'done') {
-        stats.done++;
-      }
+      if (o.status === 'completed' || o.status === 'done') stats.done++;
     });
     return stats;
   },
+
+  // === ARCHIVE LOGIC ===
+
+  async getArchivedOrderDates(projectId) {
+    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    let query = supabase
+      .from('freelance_orders')
+      .select('created_at')
+      .lt('created_at', dayAgo)
+      .order('created_at', { ascending: false });
+
+    if (projectId) query = query.eq('project_id', projectId);
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    // Group by unique YYYY-MM-DD
+    const dates = [...new Set(data.map(o => o.created_at.split('T')[0]))];
+    return dates;
+  }
+,
 
   // === REAL-TIME SUBSCRIPTIONS ===
 
