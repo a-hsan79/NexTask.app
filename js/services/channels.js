@@ -9,11 +9,13 @@ export const ChannelsService = {
   // === CHANNELS ===
 
   async getChannels(section = 'automation') {
-    const { data, error } = await supabase
+    let query = supabase
       .from('yt_channels')
       .select('*, creator:profiles!yt_channels_created_by_fkey(full_name)')
       .eq('section', section)
       .order('created_at', { ascending: false });
+
+    const { data, error } = await query;
     if (error) throw error;
     return data || [];
   },
@@ -118,25 +120,34 @@ export const ChannelsService = {
   },
 
   // Get all video stats across all channels for a specific section
-  async getAllVideoStats(section = 'automation') {
-    const { data, error } = await supabase
+  async getAllVideoStats(section = 'automation', userProfile = null) {
+    let query = supabase
       .from('yt_videos')
-      .select('status, assigned_to, yt_channels!inner(section)')
-      .eq('yt_channels.section', section);
+      .select('status, assigned_to, created_by, yt_channels!inner(section, is_public)');
+      
+    if (section) query = query.eq('yt_channels.section', section);
 
+    const { data, error } = await query;
     if (error) throw error;
+
+    const role = userProfile?.role;
+    const isPowerUser = ['owner', 'admin', 'manager'].includes(role);
+
     const stats = { 
-      total: 0, 
-      unassigned: 0, 
-      assigned: 0, 
-      done: 0,
+      total: 0, unassigned: 0, assigned: 0, done: 0,
       draft: 0, scripting: 0, recording: 0, editing: 0, uploaded: 0, published: 0 
     };
     
     (data || []).forEach(v => {
+      // Visibility Check: Power users see all. Others see Public OR assigned.
+      if (!isPowerUser && userProfile) {
+        const canSee = v.yt_channels?.is_public === true || 
+                       v.assigned_to === userProfile.id || 
+                       v.created_by === userProfile.id;
+        if (!canSee) return;
+      }
+
       stats.total++;
-      
-      // Track specific statuses (Published is tracked separately from summary Done)
       if (v.status === 'draft') stats.draft++;
       else if (v.status === 'scripting') stats.scripting++;
       else if (v.status === 'recording') stats.recording++;
@@ -144,20 +155,10 @@ export const ChannelsService = {
       else if (v.status === 'uploaded') stats.uploaded++;
       else if (v.status === 'published') stats.published++;
       
-      // Assignment stats
-      if (!v.assigned_to) {
-        stats.unassigned++;
-      } else {
-        // Only count as 'assigned' if it's NOT in a finished or pending-publish state
-        if (v.status !== 'published' && v.status !== 'done' && v.status !== 'uploaded') {
-          stats.assigned++;
-        }
-      }
+      if (!v.assigned_to) stats.unassigned++;
+      else if (v.status !== 'published' && v.status !== 'done' && v.status !== 'uploaded') stats.assigned++;
       
-      // Summary 'Done' (Published OR explicit Done status)
-      if (v.status === 'published' || v.status === 'done') {
-        stats.done++;
-      }
+      if (v.status === 'published' || v.status === 'done') stats.done++;
     });
     return stats;
   },

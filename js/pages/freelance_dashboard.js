@@ -208,7 +208,28 @@ async function loadProjectsData(userProfile, platformFilter = 'all', search = ''
     });
     const stats = await ProjectsService.getAllOrderStats();
 
-    document.getElementById('fl-projects-count').textContent = allProjects.length;
+    // Visibility Filtering for non-admins
+    const role = userProfile.role;
+    const isPowerUser = ['owner', 'admin', 'manager'].includes(role);
+    
+    let filtered = allProjects;
+    if (!isPowerUser) {
+      // Get IDs of projects where the user has assignments
+      const assignedOrders = await ProjectsService.getOrders(null);
+      const myAssignedProjectIds = new Set(
+        assignedOrders
+          .filter(o => o.assigned_to === userProfile.id)
+          .map(o => o.project_id)
+      );
+
+      filtered = allProjects.filter(p => 
+        p.is_public === true || 
+        p.created_by === userProfile.id || 
+        myAssignedProjectIds.has(p.id)
+      );
+    }
+
+    document.getElementById('fl-projects-count').textContent = filtered.length;
     document.getElementById('fl-orders-count').textContent = stats.total;
     document.getElementById('fl-active').textContent = stats.new + stats.in_progress + stats.revision;
     document.getElementById('fl-revenue').textContent = formatCurrency(stats.totalRevenue);
@@ -216,7 +237,7 @@ async function loadProjectsData(userProfile, platformFilter = 'all', search = ''
     document.getElementById('fl-assigned').textContent = stats.assigned;
     document.getElementById('fl-done').textContent = stats.done;
 
-    renderProjectsGrid(allProjects, userProfile);
+    renderProjectsGrid(filtered, userProfile);
   } catch (err) {
     console.error('Projects error:', err);
     showToast('Failed to load projects', 'error');
@@ -846,6 +867,17 @@ async function loadGlobalOrdersData(userProfile, filterType, search = '') {
     // If filter is 'done', we fetch all and filter in JS to get both completed and done
 
     let orders = await ProjectsService.getOrders(null, options);
+
+    // Visibility Filtering for non-admins
+    const role = userProfile.role;
+    const isPowerUser = ['owner', 'admin', 'manager'].includes(role);
+    if (!isPowerUser) {
+      orders = orders.filter(o => 
+        o.freelance_projects?.is_public === true || 
+        o.assigned_to === userProfile.id ||
+        o.created_by === userProfile.id
+      );
+    }
 
     // Manual filtering for complex buckets
     if (filterType === 'active') {

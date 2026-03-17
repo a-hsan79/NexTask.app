@@ -189,7 +189,28 @@ async function loadChannelsData(userProfile, search = '') {
     allChannels = await ChannelsService.getChannels(currentSection);
     const stats = await ChannelsService.getAllVideoStats(currentSection);
 
-    document.getElementById('yt-channels-count').textContent = allChannels.length;
+    // Visibility Filtering for non-admins
+    const role = userProfile.role;
+    const isPowerUser = ['owner', 'admin', 'manager'].includes(role);
+    
+    let filtered = allChannels;
+    if (!isPowerUser) {
+      // Get IDs of channels where the user has assignments
+      const assignedVideos = await ChannelsService.getVideos(null, { section: currentSection });
+      const myAssignedChannelIds = new Set(
+        assignedVideos
+          .filter(v => v.assigned_to === userProfile.id)
+          .map(v => v.channel_id)
+      );
+
+      filtered = allChannels.filter(ch => 
+        ch.is_public === true || 
+        ch.created_by === userProfile.id || 
+        myAssignedChannelIds.has(ch.id)
+      );
+    }
+
+    document.getElementById('yt-channels-count').textContent = filtered.length;
     document.getElementById('yt-videos-count').textContent = stats.total;
     document.getElementById('yt-in-progress').textContent = stats.scripting + stats.recording + stats.editing;
     document.getElementById('yt-published').textContent = stats.published;
@@ -197,10 +218,9 @@ async function loadChannelsData(userProfile, search = '') {
     document.getElementById('yt-assigned').textContent = stats.assigned;
     document.getElementById('yt-done').textContent = stats.done;
 
-    let filtered = allChannels;
     if (search) {
       const s = search.toLowerCase();
-      filtered = allChannels.filter(c => c.name.toLowerCase().includes(s));
+      filtered = filtered.filter(c => c.name.toLowerCase().includes(s));
     }
 
     renderChannelsGrid(filtered, userProfile);
@@ -892,6 +912,21 @@ async function loadGlobalVideosData(userProfile, filterType, search = '') {
     if (filterType === 'assigned') options.unassigned = false;
 
     let videos = await ChannelsService.getVideos(null, options);
+
+    // Visibility Filtering for non-admins
+    const role = userProfile.role;
+    const isPowerUser = ['owner', 'admin', 'manager'].includes(role);
+    if (!isPowerUser) {
+      // For global views, we only show videos that:
+      // 1. Are in a public channel
+      // 2. OR the user is assigned to
+      // 3. OR the user created
+      videos = videos.filter(v => 
+        v.yt_channels?.is_public === true || 
+        v.assigned_to === userProfile.id ||
+        v.created_by === userProfile.id
+      );
+    }
 
     // Manual filtering for complex buckets
     if (filterType === 'in-progress') {

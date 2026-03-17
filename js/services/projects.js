@@ -8,7 +8,7 @@ export const ProjectsService = {
 
   // === PROJECTS ===
 
-  async getProjects({ platform, search } = {}) {
+  async getProjects({ platform, search, userProfile = null } = {}) {
     let query = supabase
       .from('freelance_projects')
       .select('*, creator:profiles!freelance_projects_created_by_fkey(full_name)')
@@ -120,35 +120,38 @@ export const ProjectsService = {
   },
 
   // Get all order stats
-  async getAllOrderStats() {
-    const { data, error } = await supabase.from('freelance_orders').select('status, amount, assigned_to');
+  async getAllOrderStats(userProfile = null) {
+    const { data, error } = await supabase
+      .from('freelance_orders')
+      .select('status, amount, assigned_to, created_by, freelance_projects!inner(is_public)');
+      
     if (error) throw error;
+
+    const role = userProfile?.role;
+    const isPowerUser = ['owner', 'admin', 'manager'].includes(role);
+
     const stats = { 
-      total: 0, 
-      unassigned: 0, 
-      assigned: 0, 
-      done: 0,
+      total: 0, unassigned: 0, assigned: 0, done: 0,
       new: 0, in_progress: 0, delivered: 0, completed: 0, revision: 0, cancelled: 0, totalRevenue: 0 
     };
     
     (data || []).forEach(o => {
+      // Visibility Check: Power users see all. Others see Public OR assigned.
+      if (!isPowerUser && userProfile) {
+        const canSee = o.freelance_projects?.is_public === true || 
+                       o.assigned_to === userProfile.id || 
+                       o.created_by === userProfile.id;
+        if (!canSee) return;
+      }
+
       stats.total++;
       if (stats[o.status] !== undefined && o.status !== 'done') stats[o.status]++;
       if (o.status !== 'cancelled') stats.totalRevenue += (o.amount || 0);
       
-      if (!o.assigned_to) {
-        stats.unassigned++;
-      } else {
-        // Only count as 'assigned' if it's NOT finished or cancelled
-        if (o.status !== 'completed' && o.status !== 'done' && o.status !== 'cancelled') {
-          stats.assigned++;
-        }
-      }
+      if (!o.assigned_to) stats.unassigned++;
+      else if (o.status !== 'completed' && o.status !== 'done' && o.status !== 'cancelled') stats.assigned++;
       
-      // Summary 'Done' (Completed OR explicit Done status)
-      if (o.status === 'completed' || o.status === 'done') {
-        stats.done++;
-      }
+      if (o.status === 'completed' || o.status === 'done') stats.done++;
     });
     return stats;
   },
