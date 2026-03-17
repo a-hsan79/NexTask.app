@@ -230,8 +230,13 @@ async function renderProjectsGrid(projects, userProfile) {
     return;
   }
 
+  // Get order counts and archive info for each project
   const countsPromises = projects.map(p => ProjectsService.getProjectOrderCount(p.id));
-  const counts = await Promise.all(countsPromises);
+  const archivePromises = projects.map(p => ProjectsService.getArchivedOrderDates(p.id));
+  const [counts, archives] = await Promise.all([
+    Promise.all(countsPromises),
+    Promise.all(archivePromises)
+  ]);
 
   grid.innerHTML = projects.map((proj, i) => {
     const plat = PLATFORM_INFO[proj.platform] || PLATFORM_INFO.direct;
@@ -256,7 +261,8 @@ async function renderProjectsGrid(projects, userProfile) {
         </div>
         ${proj.description ? `<p style="font-size:var(--font-xs);color:var(--text-muted);margin-bottom:var(--space-md)">${sanitize(proj.description).slice(0, 80)}</p>` : ''}
         <div class="project-card-stats">
-          <div class="project-card-stat"><strong>${counts[i].total}</strong> orders</div>
+          <div class="project-card-stat"><strong>${counts[i].total}</strong> Active</div>
+          ${archives[i].length > 0 ? `<div class="project-card-stat clickable" data-open-history="${proj.id}" style="color:var(--primary);cursor:pointer">📜 <strong>${archives[i].length}</strong> History Folders</div>` : ''}
           <div class="project-card-stat">Created ${timeAgo(proj.created_at)}</div>
         </div>
       </div>

@@ -218,9 +218,13 @@ async function renderChannelsGrid(channels, userProfile) {
     return;
   }
 
-  // Get video counts for each channel
+  // Get video counts and archive info for each channel
   const countsPromises = channels.map(ch => ChannelsService.getChannelVideoCount(ch.id));
-  const counts = await Promise.all(countsPromises);
+  const archivePromises = channels.map(ch => ChannelsService.getArchivedVideoDates(ch.id));
+  const [counts, archives] = await Promise.all([
+    Promise.all(countsPromises),
+    Promise.all(archivePromises)
+  ]);
 
   grid.innerHTML = channels.map((ch, i) => `
     <div class="project-card" data-channel-id="${ch.id}">
@@ -239,7 +243,8 @@ async function renderChannelsGrid(channels, userProfile) {
       </div>
       ${ch.description ? `<p style="font-size:var(--font-xs);color:var(--text-muted);margin-bottom:var(--space-md)">${sanitize(ch.description).slice(0, 80)}</p>` : ''}
       <div class="project-card-stats">
-        <div class="project-card-stat"><strong>${counts[i].total}</strong> videos</div>
+        <div class="project-card-stat"><strong>${counts[i].total}</strong> Active</div>
+        ${archives[i].length > 0 ? `<div class="project-card-stat clickable" data-open-history="${ch.id}" style="color:var(--primary);cursor:pointer">📜 <strong>${archives[i].length}</strong> History Folders</div>` : ''}
         <div class="project-card-stat">Created ${timeAgo(ch.created_at)}</div>
       </div>
     </div>
@@ -256,8 +261,18 @@ async function renderChannelsGrid(channels, userProfile) {
         return;
       }
 
-      if (e.target.closest('[data-edit-channel]') || e.target.closest('[data-delete-channel]')) return;
+      if (e.target.closest('[data-edit-channel]') || e.target.closest('[data-delete-channel]') || e.target.closest('[data-open-history]')) return;
       openChannelVideos(card.dataset.channelId, userProfile);
+    });
+  });
+
+  // History Badge Click
+  grid.querySelectorAll('[data-open-history]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const channelId = btn.dataset.openHistory;
+      currentChannel = allChannels.find(c => c.id === channelId);
+      openDailyHistory(channelId, userProfile);
     });
   });
 
