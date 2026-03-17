@@ -182,6 +182,9 @@ export async function renderDashboardPage(userProfile) {
 }
 
 async function loadDashboardData(userProfile) {
+  const container = document.getElementById('dashboard-stats');
+  if (!container) return;
+
   const role = userProfile.role;
   const canSeeAll = hasPermission(role, 'view_all_tasks');
   const userId = userProfile.id;

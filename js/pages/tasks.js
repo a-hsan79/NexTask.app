@@ -2,7 +2,7 @@ import { TasksService } from '../services/tasks.js';
 import { TeamService } from '../services/team.js';
 import { hasPermission } from '../utils/permissions.js';
 import { getInitials, getAvatarColor, showToast, sanitize, timeAgo, formatDate, debounce, showConfirmModal } from '../utils/helpers.js';
-import { addSubscription } from '../app.js';
+import { addSubscription, clearSubscriptions } from '../app.js';
 
 let allTasks = [];
 let teamMembers = [];
@@ -22,6 +22,7 @@ const PRIORITY_INFO = {
 };
 
 export async function renderTasksPage(userProfile) {
+  clearSubscriptions();
   teamMembers = await TeamService.getMemberOptions();
   const mainContent = document.getElementById('main-content');
   const canCreate = hasPermission(userProfile.role, 'create_tasks');
@@ -169,6 +170,9 @@ export async function renderTasksPage(userProfile) {
 }
 
 async function loadTasksData(userProfile, statusFilter = 'all', search = '') {
+  const container = document.getElementById('tasks-list');
+  if (!container) return;
+
   try {
     const stats = await TasksService.getTaskStats();
     allTasks = await TasksService.getTasks({
