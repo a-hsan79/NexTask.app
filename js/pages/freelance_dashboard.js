@@ -978,7 +978,7 @@ async function loadHistoryDates(projectId, userProfile) {
             <div class="project-card-header">
               <div class="project-card-icon">📁</div>
               <div>
-                <div class="project-card-title">${formatDate(date)}</div>
+                <div class="project-card-title">${formatArchiveDate(date)}</div>
                 <div class="project-card-subtitle">Archives from this day</div>
               </div>
             </div>
@@ -1006,7 +1006,7 @@ async function renderHistoricalOrdersView(projectId, date, userProfile) {
     <div class="fade-in">
       <button class="back-btn" id="btn-back-to-history" style="margin-bottom:var(--space-md)">← Back to Dates</button>
       <div class="section-header" style="margin-bottom:var(--space-md)">
-        <h2>Orders from ${formatDate(date)}</h2>
+        <h2>Orders from ${formatArchiveDate(date)}</h2>
       </div>
       <div id="historical-orders-list">
         <div class="skeleton" style="height:100px;margin-bottom:8px;border-radius:var(--radius-lg)"></div>
@@ -1062,7 +1062,7 @@ async function renderHistoricalOrdersView(projectId, date, userProfile) {
   }
 }
 
-function formatDate(dateStr) {
+function formatArchiveDate(dateStr) {
   const d = new Date(dateStr);
   return d.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 }
