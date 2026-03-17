@@ -45,6 +45,7 @@ async function initApp() {
       if (currentProfile.is_confirmed) {
         renderAppShell();
         initNotificationListener();
+        Notifier.requestPermission();
 
         const params = new URLSearchParams(window.location.search);
         const urlPage = params.get('page');

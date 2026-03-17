@@ -4,6 +4,7 @@
 
 import { ProjectsService } from '../services/projects.js';
 import { TeamService } from '../services/team.js';
+import { NotificationsService } from '../services/notifications.js';
 import { hasPermission } from '../utils/permissions.js';
 import { formatCurrency, getInitials, getAvatarColor, showToast, sanitize, timeAgo, formatDate, debounce, showConfirmModal } from '../utils/helpers.js';
 import { addSubscription, clearSubscriptions } from '../app.js';
@@ -77,6 +78,13 @@ async function renderProjectsList(userProfile) {
           <div class="stat-info">
             <div class="stat-label">Active</div>
             <div class="stat-value" id="fl-active">—</div>
+          </div>
+        </div>
+        <div class="stat-card sky clickable" id="stat-fl-delivered">
+          <div class="stat-icon">📦</div>
+          <div class="stat-info">
+            <div class="stat-label">Delivered</div>
+            <div class="stat-value" id="fl-delivered">—</div>
           </div>
         </div>
         <div class="stat-card green clickable" id="stat-fl-revenue">
@@ -202,6 +210,7 @@ async function loadProjectsData(userProfile, platformFilter = 'all', search = ''
     document.getElementById('fl-projects-count').textContent = allProjects.length;
     document.getElementById('fl-orders-count').textContent = stats.total;
     document.getElementById('fl-active').textContent = stats.new + stats.in_progress + stats.revision;
+    document.getElementById('fl-delivered').textContent = stats.delivered;
     document.getElementById('fl-revenue').textContent = formatCurrency(stats.totalRevenue);
     document.getElementById('fl-unassigned').textContent = stats.unassigned;
     document.getElementById('fl-assigned').textContent = stats.assigned;
@@ -248,6 +257,7 @@ async function renderProjectsGrid(projects, userProfile) {
         </div>
         <div class="project-card-header">
           ${counts[i].total > 0 && counts[i].total === counts[i].done ? `<div class="completion-badge clickable" data-open-status="done">✅ DONE</div>` : ''}
+          ${counts[i].delivered > 0 ? `<div class="uploaded-badge clickable" data-open-status="delivered">📦 DELIVERED (${counts[i].delivered})</div>` : ''}
           <div class="project-card-icon" style="background:rgba(${proj.platform === 'fiverr' ? '27,190,66' : proj.platform === 'upwork' ? '20,163,0' : '116,185,255'},0.15)">
             ${plat.icon}
           </div>
@@ -331,6 +341,7 @@ function initProjectEvents(userProfile) {
   document.getElementById('stat-fl-unassigned')?.addEventListener('click', () => renderGlobalOrders(userProfile, 'unassigned'));
   document.getElementById('stat-fl-assigned')?.addEventListener('click', () => renderGlobalOrders(userProfile, 'assigned'));
   document.getElementById('stat-fl-done')?.addEventListener('click', () => renderGlobalOrders(userProfile, 'done'));
+  document.getElementById('stat-fl-delivered')?.addEventListener('click', () => renderGlobalOrders(userProfile, 'delivered'));
 }
 
 function openNewProject() {
@@ -744,13 +755,34 @@ async function saveOrder(userProfile) {
     }, 30000);
 
     if (editId) {
+      const oldOrder = allOrders.find(o => o.id === editId);
       await ProjectsService.updateOrder(editId, data);
       showToast('Order updated! ✅', 'success');
+
+      // Notify if assignee changed
+      if (data.assigned_to && data.assigned_to !== oldOrder?.assigned_to) {
+        await NotificationsService.createNotification({
+          userId: data.assigned_to,
+          title: '💼 New Order Assigned',
+          message: `You have been assigned to: ${title}`,
+          type: 'order'
+        });
+      }
     } else {
       data.project_id = currentProject.id;
       data.created_by = userProfile.id;
       await ProjectsService.createOrder(data);
       showToast('Order created! 🎉', 'success');
+
+      // Notify assignee if set
+      if (data.assigned_to) {
+        await NotificationsService.createNotification({
+          userId: data.assigned_to,
+          title: '💼 New Order Assigned',
+          message: `You have been assigned to: ${title}`,
+          type: 'order'
+        });
+      }
     }
     
     clearTimeout(safetyTimeout);
@@ -858,6 +890,10 @@ async function loadGlobalOrdersData(userProfile, filterType, search = '') {
     if (filterType === 'done') {
       orders = orders.filter(o => o.status === 'completed' || o.status === 'done');
     }
+    if (filterType === 'delivered') {
+      orders = orders.filter(o => o.status === 'delivered');
+    }
+    
 
     renderGlobalOrdersGrid(orders, userProfile, container);
   } catch (err) {

@@ -30,14 +30,14 @@ export async function renderDashboardPage(userProfile) {
 
       <!-- Stats Cards -->
       <div class="dashboard-stats" id="dashboard-stats">
-        <div class="stat-card purple skeleton-card">
+        <div class="stat-card purple skeleton-card clickable" id="stat-main-tasks">
           <div class="stat-icon">📋</div>
           <div class="stat-info">
             <div class="stat-label">Active Tasks</div>
             <div class="stat-value" id="stat-tasks">—</div>
           </div>
         </div>
-        <div class="stat-card teal skeleton-card">
+        <div class="stat-card teal skeleton-card clickable" id="stat-main-orders">
           <div class="stat-icon">📦</div>
           <div class="stat-info">
             <div class="stat-label">Active Orders</div>
@@ -49,6 +49,13 @@ export async function renderDashboardPage(userProfile) {
           <div class="stat-info">
             <div class="stat-label">Completed</div>
             <div class="stat-value" id="stat-completed">—</div>
+          </div>
+        </div>
+        <div class="stat-card sky skeleton-card clickable" id="stat-main-uploaded">
+          <div class="stat-icon">☁️</div>
+          <div class="stat-info">
+            <div class="stat-label">Uploaded / Delivered</div>
+            <div class="stat-value" id="stat-uploaded">—</div>
           </div>
         </div>
         ${hasPermission(role, 'view_team_stats') ? `
@@ -228,6 +235,16 @@ async function loadDashboardData(userProfile) {
     document.getElementById('stat-tasks').textContent = activeTasks;
     document.getElementById('stat-orders').textContent = activeOrders;
     document.getElementById('stat-completed').textContent = completed;
+
+    // Fetch Uploaded/Delivered counts
+    const videoStatsArr = await Promise.all([
+      ChannelsService.getAllVideoStats('automation'),
+      ChannelsService.getAllVideoStats('office')
+    ]);
+    const freelanceStats = await ProjectsService.getAllOrderStats();
+    
+    const totalUploaded = videoStatsArr[0].uploaded + videoStatsArr[1].uploaded + freelanceStats.delivered;
+    document.getElementById('stat-uploaded').textContent = totalUploaded;
     const teamStatEl = document.getElementById('stat-team');
     if (teamStatEl) teamStatEl.textContent = teamCount || 0;
 
@@ -363,6 +380,18 @@ function initDashboardEvents() {
       const page = el.dataset.navigate;
       window.dispatchEvent(new CustomEvent('navigate', { detail: { page } }));
     });
+  });
+
+  // Stat Cards Clicks
+  document.getElementById('stat-main-tasks')?.addEventListener('click', () => {
+    window.dispatchEvent(new CustomEvent('navigate', { detail: { page: 'tasks' } }));
+  });
+  document.getElementById('stat-main-orders')?.addEventListener('click', () => {
+    window.dispatchEvent(new CustomEvent('navigate', { detail: { page: 'orders' } }));
+  });
+  document.getElementById('stat-main-uploaded')?.addEventListener('click', () => {
+    // Navigate to YT automation section by default for uploaded
+    window.dispatchEvent(new CustomEvent('navigate', { detail: { page: 'yt_dashboard' } }));
   });
 
   // Quick action buttons

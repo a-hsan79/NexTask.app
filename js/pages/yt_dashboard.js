@@ -4,6 +4,7 @@
 
 import { ChannelsService } from '../services/channels.js';
 import { TeamService } from '../services/team.js';
+import { NotificationsService } from '../services/notifications.js';
 import { hasPermission } from '../utils/permissions.js';
 import { getInitials, getAvatarColor, showToast, sanitize, timeAgo, debounce, showConfirmModal } from '../utils/helpers.js';
 import { addSubscription, clearSubscriptions } from '../app.js';
@@ -84,6 +85,13 @@ async function renderChannelsList(userProfile) {
           <div class="stat-info">
             <div class="stat-label">Published / Done</div>
             <div class="stat-value" id="yt-published">—</div>
+          </div>
+        </div>
+        <div class="stat-card sky clickable" id="stat-yt-uploaded">
+          <div class="stat-icon">☁️</div>
+          <div class="stat-info">
+            <div class="stat-label">Uploaded</div>
+            <div class="stat-value" id="yt-uploaded">—</div>
           </div>
         </div>
         <div class="stat-card pink clickable" id="stat-yt-unassigned">
@@ -184,6 +192,7 @@ async function loadChannelsData(userProfile, search = '') {
     document.getElementById('yt-videos-count').textContent = stats.total;
     document.getElementById('yt-in-progress').textContent = stats.scripting + stats.recording + stats.editing;
     document.getElementById('yt-published').textContent = stats.published;
+    document.getElementById('yt-uploaded').textContent = stats.uploaded;
     document.getElementById('yt-unassigned').textContent = stats.unassigned;
     document.getElementById('yt-assigned').textContent = stats.assigned;
     document.getElementById('yt-done').textContent = stats.done;
@@ -315,6 +324,7 @@ function initChannelEvents(userProfile) {
   document.getElementById('stat-yt-unassigned')?.addEventListener('click', () => renderGlobalVideos(userProfile, 'unassigned'));
   document.getElementById('stat-yt-assigned')?.addEventListener('click', () => renderGlobalVideos(userProfile, 'assigned'));
   document.getElementById('stat-yt-done')?.addEventListener('click', () => renderGlobalVideos(userProfile, 'done'));
+  document.getElementById('stat-yt-uploaded')?.addEventListener('click', () => renderGlobalVideos(userProfile, 'uploaded'));
 }
 
 function openNewChannel() {
@@ -799,13 +809,34 @@ async function saveVideo(userProfile) {
     }, 30000);
 
     if (editId) {
+      const oldVid = allVideos.find(v => v.id === editId);
       await ChannelsService.updateVideo(editId, data);
       showToast('Video updated! ✅', 'success');
+
+      // Notify if assignee changed
+      if (data.assigned_to && data.assigned_to !== oldVid?.assigned_to) {
+        await NotificationsService.createNotification({
+          userId: data.assigned_to,
+          title: '🎬 New Video Assigned',
+          message: `You have been assigned to: ${title}`,
+          type: 'task'
+        });
+      }
     } else {
       data.channel_id = currentChannel.id;
       data.created_by = userProfile.id;
       await ChannelsService.createVideo(data);
       showToast('Video added! 🎉', 'success');
+
+      // Notify assignee if set
+      if (data.assigned_to) {
+        await NotificationsService.createNotification({
+          userId: data.assigned_to,
+          title: '🎬 New Video Assigned',
+          message: `You have been assigned to: ${title}`,
+          type: 'task'
+        });
+      }
     }
     
     clearTimeout(safetyTimeout);
@@ -916,6 +947,9 @@ async function loadGlobalVideosData(userProfile, filterType, search = '') {
     }
     if (filterType === 'done') {
       videos = videos.filter(v => v.status === 'published' || v.status === 'done');
+    }
+    if (filterType === 'uploaded') {
+      videos = videos.filter(v => v.status === 'uploaded');
     }
 
     renderGlobalVideosGrid(videos, userProfile, container);

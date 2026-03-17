@@ -124,8 +124,9 @@ export const ProjectsService = {
     
     const total = data.length;
     const done = data.filter(o => o.status === 'completed' || o.status === 'done').length;
+    const delivered = data.filter(o => o.status === 'delivered').length;
     
-    return { total, done };
+    return { total, done, delivered };
   },
 
   // Get all order stats across all projects (Active only)
