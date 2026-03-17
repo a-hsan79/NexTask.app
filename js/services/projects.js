@@ -8,7 +8,7 @@ export const ProjectsService = {
 
   // === PROJECTS ===
 
-  async getProjects({ platform, search, userProfile = null } = {}) {
+  async getProjects({ platform, search } = {}) {
     let query = supabase
       .from('freelance_projects')
       .select('*, creator:profiles!freelance_projects_created_by_fkey(full_name)')
@@ -120,15 +120,14 @@ export const ProjectsService = {
   },
 
   // Get all order stats
-  async getAllOrderStats(userProfile = null) {
-    const { data, error } = await supabase
-      .from('freelance_orders')
-      .select('status, amount, assigned_to, created_by, freelance_projects!inner(id)');
-      
+  async getAllOrderStats() {
+    const { data, error } = await supabase.from('freelance_orders').select('status, amount, assigned_to');
     if (error) throw error;
-
     const stats = { 
-      total: 0, unassigned: 0, assigned: 0, done: 0,
+      total: 0, 
+      unassigned: 0, 
+      assigned: 0, 
+      done: 0,
       new: 0, in_progress: 0, delivered: 0, completed: 0, revision: 0, cancelled: 0, totalRevenue: 0 
     };
     
@@ -137,10 +136,19 @@ export const ProjectsService = {
       if (stats[o.status] !== undefined && o.status !== 'done') stats[o.status]++;
       if (o.status !== 'cancelled') stats.totalRevenue += (o.amount || 0);
       
-      if (!o.assigned_to) stats.unassigned++;
-      else if (o.status !== 'completed' && o.status !== 'done' && o.status !== 'cancelled') stats.assigned++;
+      if (!o.assigned_to) {
+        stats.unassigned++;
+      } else {
+        // Only count as 'assigned' if it's NOT finished or cancelled
+        if (o.status !== 'completed' && o.status !== 'done' && o.status !== 'cancelled') {
+          stats.assigned++;
+        }
+      }
       
-      if (o.status === 'completed' || o.status === 'done') stats.done++;
+      // Summary 'Done' (Completed OR explicit Done status)
+      if (o.status === 'completed' || o.status === 'done') {
+        stats.done++;
+      }
     });
     return stats;
   },

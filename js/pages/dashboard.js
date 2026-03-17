@@ -182,35 +182,52 @@ export async function renderDashboardPage(userProfile) {
 }
 
 async function loadDashboardData(userProfile) {
-  const container = document.getElementById('dashboard-stats');
-  if (!container) return;
-
   const role = userProfile.role;
   const canSeeAll = hasPermission(role, 'view_all_tasks');
   const userId = userProfile.id;
 
   try {
-    // Fetch tasks via service
-    const tasks = await TasksService.getTasks({ userProfile, limit: 5 });
+    // Fetch tasks
+    let tasksQuery = supabase
+      .from('tasks')
+      .select('*, assigned_profile:profiles!tasks_assigned_to_fkey(full_name)')
+      .order('created_at', { ascending: false })
+      .limit(5);
 
-    // Fetch orders via service
-    const orders = await ProjectsService.getOrders(null, { search: '', userProfile }); // Assuming getOrders might need update too
+    if (!canSeeAll) {
+      tasksQuery = tasksQuery.eq('assigned_to', userId);
+    }
+
+    const { data: tasks } = await tasksQuery;
+
+    // Fetch orders
+    let ordersQuery = supabase
+      .from('orders')
+      .select('*, assigned_profile:profiles!orders_assigned_to_fkey(full_name)')
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    if (!hasPermission(role, 'view_all_orders')) {
+      ordersQuery = ordersQuery.eq('assigned_to', userId);
+    }
+
+    const { data: orders } = await ordersQuery;
 
     // Fetch team count
     const { count: teamCount } = await supabase
       .from('profiles')
       .select('*', { count: 'exact', head: true });
 
-    // Fetch stats via services (now visibility-aware)
-    const ytStats = await ChannelsService.getAllVideoStats('automation', userProfile);
-    const officeYtStats = await ChannelsService.getAllVideoStats('office', userProfile);
-    const flStats = await ProjectsService.getAllOrderStats(userProfile);
-    const taskStats = await TasksService.getTaskStats(); // Task stats still simple count, maybe update later
+    // Fetch stats
+    const activeTasks = tasks?.filter(t => t.status !== 'completed').length || 0;
+    const activeOrders = orders?.filter(o => !['completed', 'cancelled'].includes(o.status)).length || 0;
+    const completed = (tasks?.filter(t => t.status === 'completed').length || 0) +
+                      (orders?.filter(o => o.status === 'completed').length || 0);
 
     // Update stat cards
-    document.getElementById('stat-tasks').textContent = taskStats.total - taskStats.done;
-    document.getElementById('stat-orders').textContent = flStats.total - flStats.done;
-    document.getElementById('stat-completed').textContent = taskStats.done + flStats.done + ytStats.published + officeYtStats.published;
+    document.getElementById('stat-tasks').textContent = activeTasks;
+    document.getElementById('stat-orders').textContent = activeOrders;
+    document.getElementById('stat-completed').textContent = completed;
     const teamStatEl = document.getElementById('stat-team');
     if (teamStatEl) teamStatEl.textContent = teamCount || 0;
 

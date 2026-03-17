@@ -7,7 +7,7 @@ import { supabase } from './supabase.js';
 export const TasksService = {
 
   // Fetch all tasks (or user's own based on permissions)
-  async getTasks({ status, priority, category, assignedTo, search, limit = 50, userProfile = null } = {}) {
+  async getTasks({ status, priority, category, assignedTo, search, limit = 50 } = {}) {
     let query = supabase
       .from('tasks')
       .select('*, assigned_profile:profiles!tasks_assigned_to_fkey(full_name, role, is_remote), creator:profiles!tasks_created_by_fkey(full_name)')
@@ -17,15 +17,7 @@ export const TasksService = {
     if (status && status !== 'all') query = query.eq('status', status);
     if (priority && priority !== 'all') query = query.eq('priority', priority);
     if (category && category !== 'all') query = query.eq('category', category);
-    
-    // Visibility: If not admin/manager, only show assigned or created
-    const role = userProfile?.role;
-    if (userProfile && !['owner', 'admin', 'manager'].includes(role)) {
-      query = query.or(`assigned_to.eq.${userProfile.id},created_by.eq.${userProfile.id}`);
-    } else if (assignedTo) {
-      query = query.eq('assigned_to', assignedTo);
-    }
-
+    if (assignedTo) query = query.eq('assigned_to', assignedTo);
     if (search) query = query.ilike('title', `%${search}%`);
 
     const { data, error } = await query;

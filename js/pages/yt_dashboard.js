@@ -6,7 +6,7 @@ import { ChannelsService } from '../services/channels.js';
 import { TeamService } from '../services/team.js';
 import { hasPermission } from '../utils/permissions.js';
 import { getInitials, getAvatarColor, showToast, sanitize, timeAgo, debounce, showConfirmModal } from '../utils/helpers.js';
-import { addSubscription, clearSubscriptions } from '../app.js';
+import { addSubscription } from '../app.js';
 
 let allChannels = [];
 let allVideos = [];
@@ -38,7 +38,6 @@ export async function renderYTDashboardPage(userProfile, section = 'automation')
 // ===========================
 
 async function renderChannelsList(userProfile) {
-  clearSubscriptions();
   const mainContent = document.getElementById('main-content');
   const canCreate = hasPermission(userProfile.role, 'create_channels');
 
@@ -172,45 +171,14 @@ async function renderChannelsList(userProfile) {
     loadChannelsData(userProfile);
   });
   addSubscription(channelSub);
-
-  // Real-time info for stats/cards: Listen to video changes
-  const videoSub = ChannelsService.subscribeToVideos(null, () => {
-    console.log('Real-time update: Videos changed (stats sync)');
-    loadChannelsData(userProfile);
-  });
-  addSubscription(videoSub);
 }
 
 async function loadChannelsData(userProfile, search = '') {
-  const container = document.getElementById('channels-grid');
-  if (!container) return;
-
   try {
     allChannels = await ChannelsService.getChannels(currentSection);
-    const stats = await ChannelsService.getAllVideoStats(currentSection, userProfile);
+    const stats = await ChannelsService.getAllVideoStats(currentSection);
 
-    // Visibility Filtering for non-admins
-    const role = userProfile.role;
-    const isPowerUser = ['owner', 'admin', 'manager'].includes(role);
-    
-    let filtered = allChannels;
-    if (!isPowerUser) {
-      // Get IDs of channels where the user has assignments
-      const assignedVideos = await ChannelsService.getVideos(null, { section: currentSection });
-      const myAssignedChannelIds = new Set(
-        assignedVideos
-          .filter(v => v.assigned_to === userProfile.id)
-          .map(v => v.channel_id)
-      );
-
-      filtered = allChannels.filter(ch => 
-        ch.is_public === true || 
-        ch.created_by === userProfile.id || 
-        myAssignedChannelIds.has(ch.id)
-      );
-    }
-
-    document.getElementById('yt-channels-count').textContent = filtered.length;
+    document.getElementById('yt-channels-count').textContent = allChannels.length;
     document.getElementById('yt-videos-count').textContent = stats.total;
     document.getElementById('yt-in-progress').textContent = stats.scripting + stats.recording + stats.editing;
     document.getElementById('yt-published').textContent = stats.published;
@@ -218,9 +186,10 @@ async function loadChannelsData(userProfile, search = '') {
     document.getElementById('yt-assigned').textContent = stats.assigned;
     document.getElementById('yt-done').textContent = stats.done;
 
+    let filtered = allChannels;
     if (search) {
       const s = search.toLowerCase();
-      filtered = filtered.filter(c => c.name.toLowerCase().includes(s));
+      filtered = allChannels.filter(c => c.name.toLowerCase().includes(s));
     }
 
     renderChannelsGrid(filtered, userProfile);
@@ -415,7 +384,6 @@ async function deleteChannel(channelId, userProfile) {
 // ===========================
 
 async function openChannelVideos(channelId, userProfile, initialStatus = 'all') {
-  clearSubscriptions();
   const channel = allChannels.find(c => c.id === channelId);
   if (!channel) return;
   currentChannel = channel;
@@ -575,9 +543,6 @@ async function openChannelVideos(channelId, userProfile, initialStatus = 'all') 
 }
 
 async function loadVideosData(userProfile, statusFilter = 'all', search = '') {
-  const container = document.getElementById('videos-list');
-  if (!container || !currentChannel) return;
-
   try {
     allVideos = await ChannelsService.getVideos(currentChannel.id, {
       status: statusFilter !== 'all' ? statusFilter : undefined,
@@ -847,7 +812,6 @@ function closeModal(id) {
 // ===========================
 
 async function renderGlobalVideos(userProfile, filterType) {
-  clearSubscriptions();
   currentChannel = null;
   const mainContent = document.getElementById('main-content');
   
@@ -904,29 +868,12 @@ async function renderGlobalVideos(userProfile, filterType) {
 
 async function loadGlobalVideosData(userProfile, filterType, search = '') {
   const container = document.getElementById('global-videos-list');
-  if (!container) return;
-
   try {
     const options = { section: currentSection, search };
     if (filterType === 'unassigned') options.unassigned = true;
     if (filterType === 'assigned') options.unassigned = false;
 
     let videos = await ChannelsService.getVideos(null, options);
-
-    // Visibility Filtering for non-admins
-    const role = userProfile.role;
-    const isPowerUser = ['owner', 'admin', 'manager'].includes(role);
-    if (!isPowerUser) {
-      // For global views, we only show videos that:
-      // 1. Are in a public channel
-      // 2. OR the user is assigned to
-      // 3. OR the user created
-      videos = videos.filter(v => 
-        v.yt_channels?.is_public === true || 
-        v.assigned_to === userProfile.id ||
-        v.created_by === userProfile.id
-      );
-    }
 
     // Manual filtering for complex buckets
     if (filterType === 'in-progress') {

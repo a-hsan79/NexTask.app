@@ -6,7 +6,7 @@ import { ProjectsService } from '../services/projects.js';
 import { TeamService } from '../services/team.js';
 import { hasPermission } from '../utils/permissions.js';
 import { formatCurrency, getInitials, getAvatarColor, showToast, sanitize, timeAgo, formatDate, debounce, showConfirmModal } from '../utils/helpers.js';
-import { addSubscription, clearSubscriptions } from '../app.js';
+import { addSubscription } from '../app.js';
 
 let allProjects = [];
 let allOrders = [];
@@ -42,7 +42,6 @@ export async function renderFreelanceDashboardPage(userProfile) {
 // ===========================
 
 async function renderProjectsList(userProfile) {
-  clearSubscriptions();
   const mainContent = document.getElementById('main-content');
   const canCreate = hasPermission(userProfile.role, 'create_projects');
 
@@ -188,48 +187,17 @@ async function renderProjectsList(userProfile) {
     loadProjectsData(userProfile);
   });
   addSubscription(projectSub);
-
-  // Real-time info for stats/cards: Listen to order changes
-  const orderSub = ProjectsService.subscribeToOrders(null, () => {
-    console.log('Real-time update: Orders changed (stats sync)');
-    loadProjectsData(userProfile);
-  });
-  addSubscription(orderSub);
 }
 
 async function loadProjectsData(userProfile, platformFilter = 'all', search = '') {
-  const container = document.getElementById('projects-grid');
-  if (!container) return;
-
   try {
     allProjects = await ProjectsService.getProjects({
       platform: platformFilter !== 'all' ? platformFilter : undefined,
       search: search || undefined
     });
-    const stats = await ProjectsService.getAllOrderStats(userProfile);
+    const stats = await ProjectsService.getAllOrderStats();
 
-    // Visibility Filtering for non-admins
-    const role = userProfile.role;
-    const isPowerUser = ['owner', 'admin', 'manager'].includes(role);
-    
-    let filtered = allProjects;
-    if (!isPowerUser) {
-      // Get IDs of projects where the user has assignments
-      const assignedOrders = await ProjectsService.getOrders(null);
-      const myAssignedProjectIds = new Set(
-        assignedOrders
-          .filter(o => o.assigned_to === userProfile.id)
-          .map(o => o.project_id)
-      );
-
-      filtered = allProjects.filter(p => 
-        p.is_public === true || 
-        p.created_by === userProfile.id || 
-        myAssignedProjectIds.has(p.id)
-      );
-    }
-
-    document.getElementById('fl-projects-count').textContent = filtered.length;
+    document.getElementById('fl-projects-count').textContent = allProjects.length;
     document.getElementById('fl-orders-count').textContent = stats.total;
     document.getElementById('fl-active').textContent = stats.new + stats.in_progress + stats.revision;
     document.getElementById('fl-revenue').textContent = formatCurrency(stats.totalRevenue);
@@ -237,7 +205,7 @@ async function loadProjectsData(userProfile, platformFilter = 'all', search = ''
     document.getElementById('fl-assigned').textContent = stats.assigned;
     document.getElementById('fl-done').textContent = stats.done;
 
-    renderProjectsGrid(filtered, userProfile);
+    renderProjectsGrid(allProjects, userProfile);
   } catch (err) {
     console.error('Projects error:', err);
     showToast('Failed to load projects', 'error');
@@ -438,7 +406,6 @@ async function deleteProject(projectId, userProfile) {
 // ===========================
 
 async function openProjectOrders(projectId, userProfile, initialStatus = 'all') {
-  clearSubscriptions();
   const project = allProjects.find(p => p.id === projectId);
   if (!project) return;
   currentProject = project;
@@ -578,9 +545,6 @@ async function openProjectOrders(projectId, userProfile, initialStatus = 'all') 
 }
 
 async function loadOrdersData(userProfile, statusFilter = 'all', search = '') {
-  const container = document.getElementById('orders-list');
-  if (!container || !currentProject) return;
-
   try {
     allOrders = await ProjectsService.getOrders(currentProject.id, {
       status: statusFilter !== 'all' ? statusFilter : undefined,
@@ -802,7 +766,6 @@ function closeModal(id) {
 // ===========================
 
 async function renderGlobalOrders(userProfile, filterType) {
-  clearSubscriptions();
   currentProject = null;
   const mainContent = document.getElementById('main-content');
   
@@ -859,7 +822,6 @@ async function renderGlobalOrders(userProfile, filterType) {
 
 async function loadGlobalOrdersData(userProfile, filterType, search = '') {
   const container = document.getElementById('global-orders-list');
-  if (!container) return;
   try {
     const options = { search };
     if (filterType === 'unassigned') options.unassigned = true;
@@ -867,17 +829,6 @@ async function loadGlobalOrdersData(userProfile, filterType, search = '') {
     // If filter is 'done', we fetch all and filter in JS to get both completed and done
 
     let orders = await ProjectsService.getOrders(null, options);
-
-    // Visibility Filtering for non-admins
-    const role = userProfile.role;
-    const isPowerUser = ['owner', 'admin', 'manager'].includes(role);
-    if (!isPowerUser) {
-      orders = orders.filter(o => 
-        o.freelance_projects?.is_public === true || 
-        o.assigned_to === userProfile.id ||
-        o.created_by === userProfile.id
-      );
-    }
 
     // Manual filtering for complex buckets
     if (filterType === 'active') {
