@@ -6,7 +6,7 @@ import { ChannelsService } from '../services/channels.js';
 import { TeamService } from '../services/team.js';
 import { hasPermission } from '../utils/permissions.js';
 import { getInitials, getAvatarColor, showToast, sanitize, timeAgo, debounce, showConfirmModal } from '../utils/helpers.js';
-import { addSubscription } from '../app.js';
+import { addSubscription, clearSubscriptions } from '../app.js';
 
 let allChannels = [];
 let allVideos = [];
@@ -38,6 +38,7 @@ export async function renderYTDashboardPage(userProfile, section = 'automation')
 // ===========================
 
 async function renderChannelsList(userProfile) {
+  clearSubscriptions();
   const mainContent = document.getElementById('main-content');
   const canCreate = hasPermission(userProfile.role, 'create_channels');
 
@@ -168,7 +169,8 @@ async function renderChannelsList(userProfile) {
   // Real-time subscription for channels
   const channelSub = ChannelsService.subscribeToChannels(() => {
     console.log('Real-time update: Channels list changed');
-    loadChannelsData(userProfile);
+    const ytStats = document.getElementById('yt-stats');
+    if (ytStats) loadChannelsData(userProfile);
   });
   addSubscription(channelSub);
 }
@@ -201,6 +203,7 @@ async function loadChannelsData(userProfile, search = '') {
 
 async function renderChannelsGrid(channels, userProfile) {
   const grid = document.getElementById('channels-grid');
+  if (!grid) return; // View changed
   const canEdit = hasPermission(userProfile.role, 'edit_channels');
   const canDelete = hasPermission(userProfile.role, 'delete_channels');
 
@@ -384,6 +387,7 @@ async function deleteChannel(channelId, userProfile) {
 // ===========================
 
 async function openChannelVideos(channelId, userProfile, initialStatus = 'all') {
+  clearSubscriptions();
   const channel = allChannels.find(c => c.id === channelId);
   if (!channel) return;
   currentChannel = channel;
@@ -557,6 +561,7 @@ async function loadVideosData(userProfile, statusFilter = 'all', search = '') {
 
 function renderVideosList(videos, userProfile) {
   const container = document.getElementById('videos-list');
+  if (!container) return; // View changed
   const canEdit = hasPermission(userProfile.role, 'edit_videos');
   const canDelete = hasPermission(userProfile.role, 'delete_videos');
 
@@ -812,6 +817,7 @@ function closeModal(id) {
 // ===========================
 
 async function renderGlobalVideos(userProfile, filterType) {
+  clearSubscriptions();
   currentChannel = null;
   const mainContent = document.getElementById('main-content');
   
@@ -868,6 +874,7 @@ async function renderGlobalVideos(userProfile, filterType) {
 
 async function loadGlobalVideosData(userProfile, filterType, search = '') {
   const container = document.getElementById('global-videos-list');
+  if (!container) return; // View changed, stop update
   try {
     const options = { section: currentSection, search };
     if (filterType === 'unassigned') options.unassigned = true;
@@ -897,6 +904,7 @@ async function loadGlobalVideosData(userProfile, filterType, search = '') {
 }
 
 function renderGlobalVideosGrid(videos, userProfile, container) {
+  if (!container) return; // View changed
   if (!videos.length) {
     container.innerHTML = `
       <div class="empty-state">

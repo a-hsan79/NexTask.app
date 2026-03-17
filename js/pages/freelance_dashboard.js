@@ -6,7 +6,7 @@ import { ProjectsService } from '../services/projects.js';
 import { TeamService } from '../services/team.js';
 import { hasPermission } from '../utils/permissions.js';
 import { formatCurrency, getInitials, getAvatarColor, showToast, sanitize, timeAgo, formatDate, debounce, showConfirmModal } from '../utils/helpers.js';
-import { addSubscription } from '../app.js';
+import { addSubscription, clearSubscriptions } from '../app.js';
 
 let allProjects = [];
 let allOrders = [];
@@ -42,6 +42,7 @@ export async function renderFreelanceDashboardPage(userProfile) {
 // ===========================
 
 async function renderProjectsList(userProfile) {
+  clearSubscriptions();
   const mainContent = document.getElementById('main-content');
   const canCreate = hasPermission(userProfile.role, 'create_projects');
 
@@ -184,7 +185,8 @@ async function renderProjectsList(userProfile) {
   // Real-time subscription for projects
   const projectSub = ProjectsService.subscribeToProjects(() => {
     console.log('Real-time update: Projects list changed');
-    loadProjectsData(userProfile);
+    const flStats = document.getElementById('fl-stats');
+    if (flStats) loadProjectsData(userProfile);
   });
   addSubscription(projectSub);
 }
@@ -406,6 +408,7 @@ async function deleteProject(projectId, userProfile) {
 // ===========================
 
 async function openProjectOrders(projectId, userProfile, initialStatus = 'all') {
+  clearSubscriptions();
   const project = allProjects.find(p => p.id === projectId);
   if (!project) return;
   currentProject = project;
@@ -559,6 +562,7 @@ async function loadOrdersData(userProfile, statusFilter = 'all', search = '') {
 
 function renderOrdersList(orders, userProfile) {
   const container = document.getElementById('orders-list');
+  if (!container) return; // View changed
   const canEdit = hasPermission(userProfile.role, 'edit_orders');
   const canDelete = hasPermission(userProfile.role, 'delete_orders');
 
@@ -766,6 +770,7 @@ function closeModal(id) {
 // ===========================
 
 async function renderGlobalOrders(userProfile, filterType) {
+  clearSubscriptions();
   currentProject = null;
   const mainContent = document.getElementById('main-content');
   
@@ -849,6 +854,7 @@ async function loadGlobalOrdersData(userProfile, filterType, search = '') {
 }
 
 function renderGlobalOrdersGrid(orders, userProfile, container) {
+  if (!container) return; // View changed
   if (!orders.length) {
     container.innerHTML = `
       <div class="empty-state">
