@@ -4,7 +4,6 @@
 
 import { ChannelsService } from '../services/channels.js';
 import { TeamService } from '../services/team.js';
-import { NotificationsService } from '../services/notifications.js';
 import { hasPermission } from '../utils/permissions.js';
 import { getInitials, getAvatarColor, showToast, sanitize, timeAgo, debounce, showConfirmModal } from '../utils/helpers.js';
 import { addSubscription, clearSubscriptions } from '../app.js';
@@ -12,6 +11,102 @@ import { addSubscription, clearSubscriptions } from '../app.js';
 let allChannels = [];
 let allVideos = [];
 let teamMembers = [];
+
+function getVideoModalHTML() {
+  return `
+    <!-- Video Modal -->
+    <div class="modal-overlay" id="video-modal-overlay">
+      <div class="modal" style="max-width:580px">
+        <div class="modal-header">
+          <h2 id="video-modal-title">Add Video</h2>
+          <button class="modal-close" id="video-modal-close">✕</button>
+        </div>
+        <form id="video-form">
+          <div class="form-group">
+            <label class="form-label">Video Title *</label>
+            <input type="text" class="form-input" id="vid-title" placeholder="e.g., Top 10 AI Tools 2026" required />
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md)">
+            <div class="form-group">
+              <label class="form-label">📝 Script Link</label>
+              <input type="url" class="form-input" id="vid-script" placeholder="Google Docs / Notion link" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">🎙️ Voiceover Link</label>
+              <input type="url" class="form-input" id="vid-voiceover" placeholder="Drive / Dropbox link" />
+            </div>
+          </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md)">
+              <div class="form-group">
+                <label class="form-label">🖼️ Thumbnail Link</label>
+                <input type="url" class="form-input" id="vid-thumbnail" placeholder="Canva / Figma link" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">🔗 Video / YouTube Link</label>
+                <input type="url" class="form-input" id="vid-video" placeholder="YouTube URL" />
+              </div>
+            </div>
+            
+            <!-- Version 2 Collapsible Section -->
+            <div class="v2-accordion" style="margin-bottom:var(--space-md)">
+              <button type="button" class="btn btn-ghost" id="v2-toggle-btn" style="width:100%;justify-content:space-between;border:1px dashed var(--border-color);margin-bottom:8px">
+                <span>➕ Add Version 2 Details</span>
+                <span id="v2-toggle-icon">▼</span>
+              </button>
+              <div id="v2-content" class="hidden" style="padding:var(--space-md);background:var(--bg-secondary);border-radius:var(--radius-md)">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md)">
+                  <div class="form-group">
+                    <label class="form-label">📝 Script V2 Link</label>
+                    <input type="url" class="form-input" id="vid-script-v2" placeholder="Version 2 Script" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">🎙️ Voiceover V2 Link</label>
+                    <input type="url" class="form-input" id="vid-voiceover-v2" placeholder="Version 2 Voiceover" />
+                  </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md)">
+                  <div class="form-group">
+                    <label class="form-label">🖼️ Thumbnail V2 Link</label>
+                    <input type="url" class="form-input" id="vid-thumbnail-v2" placeholder="Version 2 Thumbnail" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">🔗 Video V2 Link</label>
+                    <input type="url" class="form-input" id="vid-video-v2" placeholder="Version 2 Video URL" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md)">
+            <div class="form-group">
+              <label class="form-label">Assign To</label>
+              <select class="form-select" id="vid-assign"></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Status</label>
+              <select class="form-select" id="vid-status">
+                <option value="draft">📝 Draft</option>
+                <option value="scripting">✍️ Scripting</option>
+                <option value="recording">🎙️ Recording</option>
+                <option value="editing">✂️ Editing</option>
+                <option value="uploaded">☁️ Uploaded</option>
+                <option value="published">🚀 Published</option>
+                <option value="done">✅ Done</option>
+              </select>
+            </div>
+          </div>
+          <input type="hidden" id="vid-edit-id" />
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" id="video-cancel">Cancel</button>
+            <button type="submit" class="btn btn-primary">
+              <span id="vid-btn-text">Add Video</span>
+              <div class="spinner hidden" id="vid-btn-spinner"></div>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+}
 let currentChannel = null;
 let currentSection = 'automation';
 let moduleUserProfile = null; // New global reference
@@ -32,6 +127,8 @@ export async function renderYTDashboardPage(userProfile, section = 'automation')
   currentChannel = null;
   teamMembers = await TeamService.getMemberOptions();
   await renderChannelsList(userProfile);
+  activeHistoryDate = null;
+  activeHistoryChannelId = null;
 }
 
 // ===========================
@@ -416,6 +513,8 @@ async function openChannelVideos(channelId, userProfile, initialStatus = 'all') 
   const channel = allChannels.find(c => c.id === channelId);
   if (!channel) return;
   currentChannel = channel;
+  activeHistoryDate = null;
+  activeHistoryChannelId = null;
 
   const mainContent = document.getElementById('main-content');
   const canCreate = hasPermission(userProfile.role, 'create_videos');
@@ -461,97 +560,7 @@ async function openChannelVideos(channelId, userProfile, initialStatus = 'all') 
       </div>
     </div>
 
-    <!-- Video Modal -->
-    <div class="modal-overlay" id="video-modal-overlay">
-      <div class="modal" style="max-width:580px">
-        <div class="modal-header">
-          <h2 id="video-modal-title">Add Video</h2>
-          <button class="modal-close" id="video-modal-close">✕</button>
-        </div>
-        <form id="video-form">
-          <div class="form-group">
-            <label class="form-label">Video Title *</label>
-            <input type="text" class="form-input" id="vid-title" placeholder="e.g., Top 10 AI Tools 2026" required />
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md)">
-            <div class="form-group">
-              <label class="form-label">📝 Script Link</label>
-              <input type="url" class="form-input" id="vid-script" placeholder="Google Docs / Notion link" />
-            </div>
-            <div class="form-group">
-              <label class="form-label">🎙️ Voiceover Link</label>
-              <input type="url" class="form-input" id="vid-voiceover" placeholder="Drive / Dropbox link" />
-            </div>
-          </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md)">
-              <div class="form-group">
-                <label class="form-label">🖼️ Thumbnail Link</label>
-                <input type="url" class="form-input" id="vid-thumbnail" placeholder="Canva / Figma link" />
-              </div>
-              <div class="form-group">
-                <label class="form-label">🔗 Video / YouTube Link</label>
-                <input type="url" class="form-input" id="vid-video" placeholder="YouTube URL" />
-              </div>
-            </div>
-            
-            <!-- Version 2 Collapsible Section -->
-            <div class="v2-accordion" style="margin-bottom:var(--space-md)">
-              <button type="button" class="btn btn-ghost" id="v2-toggle-btn" style="width:100%;justify-content:space-between;border:1px dashed var(--border-color);margin-bottom:8px">
-                <span>➕ Add Version 2 Details</span>
-                <span id="v2-toggle-icon">▼</span>
-              </button>
-              <div id="v2-content" class="hidden" style="padding:var(--space-md);background:var(--bg-secondary);border-radius:var(--radius-md)">
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md)">
-                  <div class="form-group">
-                    <label class="form-label">📝 Script V2 Link</label>
-                    <input type="url" class="form-input" id="vid-script-v2" placeholder="Version 2 Script" />
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label">🎙️ Voiceover V2 Link</label>
-                    <input type="url" class="form-input" id="vid-voiceover-v2" placeholder="Version 2 Voiceover" />
-                  </div>
-                </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md)">
-                  <div class="form-group">
-                    <label class="form-label">🖼️ Thumbnail V2 Link</label>
-                    <input type="url" class="form-input" id="vid-thumbnail-v2" placeholder="Version 2 Thumbnail" />
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label">🔗 Video V2 Link</label>
-                    <input type="url" class="form-input" id="vid-video-v2" placeholder="Version 2 Video URL" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md)">
-            <div class="form-group">
-              <label class="form-label">Assign To</label>
-              <select class="form-select" id="vid-assign"></select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Status</label>
-              <select class="form-select" id="vid-status">
-                <option value="draft">📝 Draft</option>
-                <option value="scripting">✍️ Scripting</option>
-                <option value="recording">🎙️ Recording</option>
-                <option value="editing">✂️ Editing</option>
-                <option value="uploaded">☁️ Uploaded</option>
-                <option value="published">🚀 Published</option>
-                <option value="done">✅ Done</option>
-              </select>
-            </div>
-          </div>
-          <input type="hidden" id="vid-edit-id" />
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" id="video-cancel">Cancel</button>
-            <button type="submit" class="btn btn-primary">
-              <span id="vid-btn-text">Add Video</span>
-              <div class="spinner hidden" id="vid-btn-spinner"></div>
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+    ${getVideoModalHTML()}
   `;
 
   await loadVideosData(userProfile, initialStatus);
@@ -774,6 +783,7 @@ function editVideo(videoId) {
 
 function populateAssignDropdown(selectId, selectedId = '') {
   const select = document.getElementById(selectId);
+  if (!select) return;
   select.innerHTML = `<option value="">— Unassigned —</option>` +
     teamMembers.map(m => `<option value="${m.id}" ${m.id === selectedId ? 'selected' : ''}>${m.full_name} (${m.role})</option>`).join('');
 }
@@ -788,18 +798,37 @@ async function saveVideo(userProfile) {
   btnText.classList.add('hidden'); spinner.classList.remove('hidden');
 
   try {
+    const assignedTo = document.getElementById('vid-assign').value || null;
+    let status = document.getElementById('vid-status').value;
+
+    const v1Link = document.getElementById('vid-video').value.trim();
+    const v2Link = document.getElementById('vid-video-v2').value.trim();
+    const hasAnyLink = !!(v1Link || v2Link);
+
+    // CRM Automation: Handle Status Transitions
+    if (hasAnyLink) {
+      status = 'done';
+    } else if (!assignedTo) {
+      status = 'draft'; // Strictly follow: unassigned -> draft
+    } else {
+      // Assigned but NO link: Ensure it's in an active state
+      if (status === 'done' || status === 'uploaded' || status === 'published' || status === 'draft') {
+        status = 'editing';
+      }
+    }
+
     const data = {
       title,
       script_link: document.getElementById('vid-script').value.trim() || null,
       voiceover_link: document.getElementById('vid-voiceover').value.trim() || null,
       thumbnail_link: document.getElementById('vid-thumbnail').value.trim() || null,
-      video_link: document.getElementById('vid-video').value.trim() || null,
+      video_link: v1Link || null,
       script_v2_link: document.getElementById('vid-script-v2').value.trim() || null,
       voiceover_v2_link: document.getElementById('vid-voiceover-v2').value.trim() || null,
       thumbnail_v2_link: document.getElementById('vid-thumbnail-v2').value.trim() || null,
-      video_v2_link: document.getElementById('vid-video-v2').value.trim() || null,
-      assigned_to: document.getElementById('vid-assign').value || null,
-      status: document.getElementById('vid-status').value
+      video_v2_link: v2Link || null,
+      assigned_to: assignedTo,
+      status: status
     };
 
     // Safety Timeout: Reset UI if backend hangs for > 30s
@@ -813,35 +842,22 @@ async function saveVideo(userProfile) {
       await ChannelsService.updateVideo(editId, data);
       showToast('Video updated! ✅', 'success');
 
-      // Notify if assignee changed
-      if (data.assigned_to && data.assigned_to !== oldVid?.assigned_to) {
-        await NotificationsService.createNotification({
-          userId: data.assigned_to,
-          title: '🎬 New Video Assigned',
-          message: `You have been assigned to: ${title}`,
-          type: 'task'
-        });
-      }
     } else {
       data.channel_id = currentChannel.id;
       data.created_by = userProfile.id;
       await ChannelsService.createVideo(data);
       showToast('Video added! 🎉', 'success');
 
-      // Notify assignee if set
-      if (data.assigned_to) {
-        await NotificationsService.createNotification({
-          userId: data.assigned_to,
-          title: '🎬 New Video Assigned',
-          message: `You have been assigned to: ${title}`,
-          type: 'task'
-        });
-      }
     }
     
     clearTimeout(safetyTimeout);
     closeModal('video-modal-overlay');
-    await loadVideosData(userProfile);
+    
+    if (activeHistoryDate && activeHistoryChannelId) {
+      await renderHistoricalVideosView(activeHistoryChannelId, activeHistoryDate, userProfile);
+    } else {
+      await loadVideosData(userProfile);
+    }
   } catch (err) {
     console.error('Save Video Error:', err);
     showToast('Failed: ' + err.message, 'error');
@@ -857,7 +873,12 @@ async function deleteVideo(videoId, userProfile) {
   try {
     await ChannelsService.deleteVideo(videoId);
     showToast('Video deleted', 'success');
-    await loadVideosData(userProfile);
+    
+    if (activeHistoryDate && activeHistoryChannelId) {
+      await renderHistoricalVideosView(activeHistoryChannelId, activeHistoryDate, userProfile);
+    } else {
+      await loadVideosData(userProfile);
+    }
   } catch (err) { showToast('Failed: ' + err.message, 'error'); }
 }
 
@@ -1037,17 +1058,20 @@ async function openDailyHistory(channelId, userProfile) {
         </div>
       </div>
 
-      <div id="history-content" class="fade-in">
+      <div id="history-content">
         <div class="skeleton" style="height:100px;margin-bottom:8px;border-radius:var(--radius-lg)"></div>
         <div class="skeleton" style="height:100px;border-radius:var(--radius-lg)"></div>
       </div>
     </div>
+
+    ${getVideoModalHTML()}
   `;
 
   document.getElementById('btn-back-to-channel').addEventListener('click', () => {
     openChannelVideos(channelId, userProfile);
   });
 
+  initVideoEvents(userProfile);
   await loadHistoryDates(channelId, userProfile);
 }
 
@@ -1056,6 +1080,7 @@ async function loadHistoryDates(channelId, userProfile) {
   try {
     const dates = await ChannelsService.getArchivedVideoDates(channelId);
     
+    if (!container) return;
     if (!dates.length) {
       container.innerHTML = `
         <div class="empty-state">
@@ -1067,6 +1092,7 @@ async function loadHistoryDates(channelId, userProfile) {
       return;
     }
 
+    if (!container) return;
     container.innerHTML = `
       <div class="project-grid">
         ${dates.map(date => `
@@ -1095,8 +1121,14 @@ async function loadHistoryDates(channelId, userProfile) {
   }
 }
 
+let activeHistoryDate = null;
+let activeHistoryChannelId = null;
+
 async function renderHistoricalVideosView(channelId, date, userProfile) {
+  activeHistoryDate = date;
+  activeHistoryChannelId = channelId;
   const container = document.getElementById('history-content');
+  if (!container) return;
   
   container.innerHTML = `
     <div class="fade-in">
@@ -1111,6 +1143,8 @@ async function renderHistoricalVideosView(channelId, date, userProfile) {
   `;
 
   document.getElementById('btn-back-to-history').addEventListener('click', () => {
+    activeHistoryDate = null;
+    activeHistoryChannelId = null;
     loadHistoryDates(channelId, userProfile);
   });
 
@@ -1118,14 +1152,19 @@ async function renderHistoricalVideosView(channelId, date, userProfile) {
     const videos = await ChannelsService.getVideos(channelId, { includeArchived: true });
     // Filter for the specific date (YYYY-MM-DD match)
     const dailyVideos = videos.filter(v => v.created_at.startsWith(date));
+    allVideos = dailyVideos; // Update global state so editVideo can find them
     
     const listContainer = document.getElementById('historical-videos-list');
+    if (!listContainer) return;
     
     if (!dailyVideos.length) {
       listContainer.innerHTML = `<p class="text-muted">No videos found for this date.</p>`;
       return;
     }
 
+    const canDelete = hasPermission(userProfile.role, 'delete_videos');
+
+    if (!listContainer) return;
     listContainer.innerHTML = dailyVideos.map(vid => {
       const st = VIDEO_STATUSES[vid.status] || VIDEO_STATUSES.draft;
       const assignee = vid.assigned_profile;
@@ -1146,6 +1185,10 @@ async function renderHistoricalVideosView(channelId, date, userProfile) {
                 <span>📅 Created ${timeAgo(vid.created_at)}</span>
               </div>
             </div>
+            <div style="display:flex;gap:4px">
+              <button class="btn btn-ghost btn-sm" data-edit-hist-video="${vid.id}">✏️</button>
+              ${canDelete ? `<button class="btn btn-ghost btn-sm" data-delete-hist-video="${vid.id}">🗑️</button>` : ''}
+            </div>
           </div>
           <div class="link-fields-grid">
             ${renderLinkField('📝', 'Script', vid.script_link)}
@@ -1156,6 +1199,13 @@ async function renderHistoricalVideosView(channelId, date, userProfile) {
         </div>
       `;
     }).join('');
+
+    listContainer.querySelectorAll('[data-edit-hist-video]').forEach(btn => {
+      btn.addEventListener('click', () => editVideo(btn.dataset.editHistVideo));
+    });
+    listContainer.querySelectorAll('[data-delete-hist-video]').forEach(btn => {
+      btn.addEventListener('click', () => deleteVideo(btn.dataset.deleteHistVideo, userProfile));
+    });
 
   } catch (err) {
     console.error('Historical videos error:', err);

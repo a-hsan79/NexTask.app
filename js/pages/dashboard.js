@@ -285,6 +285,7 @@ async function loadDashboardData(userProfile) {
 
 function renderRecentTasks(tasks) {
   const container = document.getElementById('recent-tasks-list');
+  if (!container) return;
   if (!tasks.length) {
     container.innerHTML = `
       <div class="empty-state">
@@ -318,6 +319,7 @@ function renderRecentTasks(tasks) {
 
 function renderRecentOrders(orders) {
   const container = document.getElementById('recent-orders-list');
+  if (!container) return;
   if (!orders.length) {
     container.innerHTML = `
       <div class="empty-state">

@@ -142,6 +142,10 @@ export async function renderTasksPage(userProfile) {
               <input type="date" class="form-input" id="task-due" />
             </div>
           </div>
+          <div class="form-group">
+            <label class="form-label">🔗 Result / Work Link</label>
+            <input type="url" class="form-input" id="task-result" placeholder="Link to completed work..." />
+          </div>
           <input type="hidden" id="task-edit-id" />
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" id="task-cancel">Cancel</button>
@@ -200,6 +204,7 @@ async function loadTasksData(userProfile, statusFilter = 'all', search = '') {
 
 function renderTasksList(tasks, userProfile) {
   const container = document.getElementById('tasks-list');
+  if (!container) return;
   const canEdit = hasPermission(userProfile.role, 'edit_any_task');
   const canDelete = hasPermission(userProfile.role, 'delete_tasks');
 
@@ -246,6 +251,11 @@ function renderTasksList(tasks, userProfile) {
           </div>
         </div>
         ${task.description ? `<p class="item-card-desc">${sanitize(task.description)}</p>` : ''}
+        ${task.result_link ? `
+          <div style="margin-top:var(--space-sm);padding-top:var(--space-sm);border-top:1px dashed var(--border-color)">
+            <a href="${sanitize(task.result_link)}" target="_blank" class="btn btn-ghost btn-sm" style="color:var(--primary);font-size:var(--font-xs)">🔗 View Result / Work ↗</a>
+          </div>
+        ` : ''}
       </div>
     `;
   }).join('');
@@ -311,6 +321,7 @@ function openNewTask() {
 function populateAssignDropdown(selectedId = '') {
   const select = document.getElementById('task-assign');
   if (!select) return;
+  if (!select) return;
   select.innerHTML = `<option value="">— Unassigned —</option>` +
     teamMembers.map(m => `<option value="${m.id}" ${m.id === selectedId ? 'selected' : ''}>${m.full_name}</option>`).join('');
 }
@@ -326,6 +337,7 @@ function editTask(taskId) {
   document.getElementById('task-status').value = t.status;
   document.getElementById('task-priority').value = t.priority;
   document.getElementById('task-due').value = t.due_date ? t.due_date.split('T')[0] : '';
+  document.getElementById('task-result').value = t.result_link || '';
   populateAssignDropdown(t.assigned_to);
   document.getElementById('task-modal-overlay').classList.add('active');
 }
@@ -340,13 +352,30 @@ async function saveTask(userProfile) {
   btnText.classList.add('hidden'); spinner.classList.remove('hidden');
 
   try {
+    const assignedTo = document.getElementById('task-assign').value || null;
+    let status = document.getElementById('task-status').value;
+    const resultLink = document.getElementById('task-result').value.trim();
+
+    // CRM Automation: Handle Status Transitions
+    if (resultLink) {
+      status = 'done';
+    } else if (!assignedTo) {
+      status = 'pending'; // Strictly follow: unassigned -> draft (pending)
+    } else {
+      // Assigned but NO link: Ensure it's in an active state
+      if (status === 'done' || status === 'completed' || status === 'review' || status === 'pending') {
+        status = 'in_progress';
+      }
+    }
+
     const data = {
       title,
       description: document.getElementById('task-desc').value.trim() || null,
-      status: document.getElementById('task-status').value,
+      status: status,
       priority: document.getElementById('task-priority').value,
-      assigned_to: document.getElementById('task-assign').value || null,
-      due_date: document.getElementById('task-due').value || null
+      assigned_to: assignedTo,
+      due_date: document.getElementById('task-due').value || null,
+      result_link: resultLink || null
     };
 
     // Safety Timeout: Reset UI if backend hangs for > 30s

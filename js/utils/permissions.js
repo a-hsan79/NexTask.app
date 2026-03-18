@@ -58,8 +58,6 @@ const PERMISSIONS = {
   // Settings
   view_settings: ['owner', 'admin'],
 
-  // Notifications
-  view_notifications: ['owner', 'admin', 'manager', 'editor', 'designer', 'writer'],
 
   // Delete anything
   delete_anything: ['owner', 'admin']
@@ -83,8 +81,7 @@ export function canAccessPage(userRole, pageName) {
     orders: 'view_own_orders',
     team: 'manage_team',
     expenses: 'view_expenses',
-    settings: 'view_settings',
-    notifications: 'view_notifications'
+    settings: 'view_settings'
   };
 
   const requiredPermission = pagePermissions[pageName];

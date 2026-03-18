@@ -12,16 +12,12 @@ import { renderFreelanceDashboardPage } from './pages/freelance_dashboard.js';
 import { renderTeamPage } from './pages/team.js';
 import { renderTasksPage } from './pages/tasks.js';
 import { renderExpensesPage } from './pages/expenses.js';
-import { renderNotificationsPage } from './pages/notifications.js';
 import { renderSettingsPage } from './pages/settings.js';
-import { NotificationsService } from './services/notifications.js';
-import { Notifier } from './utils/notifier.js';
 
 // App State
 let currentUser = null;
 let currentProfile = null;
 let currentPage = 'dashboard';
-let notifSubscription = null;
 let currentSubscriptions = []; // Array of active Supabase Realtime channels
 let isNavigating = false;
 
@@ -44,8 +40,6 @@ async function initApp() {
       
       if (currentProfile.is_confirmed) {
         renderAppShell();
-        initNotificationListener();
-        Notifier.requestPermission();
 
         const params = new URLSearchParams(window.location.search);
         const urlPage = params.get('page');
@@ -88,7 +82,6 @@ async function initApp() {
         if (currentProfile && currentProfile.is_confirmed) {
           if (!document.getElementById('sidebar')) {
             renderAppShell();
-            initNotificationListener();
           }
 
           const params = new URLSearchParams(window.location.search);
@@ -108,10 +101,6 @@ async function initApp() {
       
       const isAlreadyOnLogin = document.querySelector('.login-page');
       if (!isAlreadyOnLogin) {
-        if (notifSubscription) {
-          notifSubscription.unsubscribe();
-          notifSubscription = null;
-        }
         renderLoginPage();
       }
     }
@@ -218,11 +207,6 @@ function renderAppShell() {
           <!-- System -->
           <div class="sidebar-section">
             <div class="sidebar-section-label">System</div>
-            <a class="sidebar-link" data-page="notifications">
-              <span class="link-icon">🔔</span>
-              <span>Notifications</span>
-              <span class="link-badge hidden" id="notif-badge">0</span>
-            </a>
             ${hasPermission(role, 'view_settings') ? `
             <a class="sidebar-link" data-page="settings">
               <span class="link-icon">⚙️</span>
@@ -349,9 +333,6 @@ async function navigateTo(page, skipPushState = false) {
           break;
         case 'expenses':
           await renderExpensesPage(currentProfile);
-          break;
-        case 'notifications':
-          await renderNotificationsPage(currentProfile);
           break;
         case 'settings':
           await renderSettingsPage(currentProfile);
@@ -530,48 +511,6 @@ function initAppShellEvents() {
 // ===========================
 // Start the app
 // ===========================
-
-// ===========================
-// Real-time Notifications
-// ===========================
-
-function initNotificationListener() {
-  if (!currentProfile || notifSubscription) return;
-
-  notifSubscription = NotificationsService.subscribeToNewNotifications(currentProfile.id, (notif) => {
-    // 1. Show Desktop Notification
-    Notifier.show(notif.title, {
-      body: notif.message,
-      data: { url: `?page=notifications` }
-    });
-
-    // 2. Refresh Unread Badge
-    updateBottomNavBadge();
-    
-    // 3. Refresh Notifications Page if active
-    if (currentPage === 'notifications' && window.refreshNotifications) {
-      window.refreshNotifications(currentProfile);
-    } else if (currentPage === 'notifications') {
-      renderNotificationsPage(currentProfile);
-    }
-    
-    // 4. Show Toast
-    showToast(`New Notification: ${notif.title}`, 'info');
-  });
-
-  // Initial badge update
-  updateBottomNavBadge();
-}
-
-async function updateBottomNavBadge() {
-  if (!currentProfile) return;
-  const count = await NotificationsService.getUnreadCount(currentProfile.id);
-  const badge = document.getElementById('notif-badge');
-  if (badge) {
-    badge.textContent = count;
-    badge.classList.toggle('hidden', count === 0);
-  }
-}
 
 // Subscription Management for pages
 export function addSubscription(channel) {

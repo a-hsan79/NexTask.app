@@ -4,7 +4,6 @@
 
 import { ProjectsService } from '../services/projects.js';
 import { TeamService } from '../services/team.js';
-import { NotificationsService } from '../services/notifications.js';
 import { hasPermission } from '../utils/permissions.js';
 import { formatCurrency, getInitials, getAvatarColor, showToast, sanitize, timeAgo, formatDate, debounce, showConfirmModal } from '../utils/helpers.js';
 import { addSubscription, clearSubscriptions } from '../app.js';
@@ -14,6 +13,85 @@ let allOrders = [];
 let teamMembers = [];
 let currentProject = null;
 let moduleUserProfile = null; // New global reference
+
+function getOrderModalHTML() {
+  return `
+    <!-- Order Modal -->
+    <div class="modal-overlay" id="order-modal-overlay">
+      <div class="modal" style="max-width:580px">
+        <div class="modal-header">
+          <h2 id="order-modal-title">Add Order</h2>
+          <button class="modal-close" id="order-modal-close">✕</button>
+        </div>
+        <form id="order-form">
+          <div class="form-group">
+            <label class="form-label">Order Title *</label>
+            <input type="text" class="form-input" id="ord-title" placeholder="e.g., Logo Design v2" required />
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md)">
+            <div class="form-group">
+              <label class="form-label">📝 Brief / Requirements Link</label>
+              <input type="url" class="form-input" id="ord-brief" placeholder="Google Docs / Notion link" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">🎨 Design Files Link</label>
+              <input type="url" class="form-input" id="ord-design" placeholder="Figma / Drive link" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">📦 Deliverable Link</label>
+            <input type="url" class="form-input" id="ord-deliverable" placeholder="Final deliverable link" />
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md)">
+            <div class="form-group">
+              <label class="form-label">Amount</label>
+              <input type="number" class="form-input" id="ord-amount" placeholder="0" min="0" step="0.01" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Currency</label>
+              <select class="form-select" id="ord-currency">
+                <option value="PKR">PKR (₨)</option>
+                <option value="USD">USD ($)</option>
+                <option value="EUR">EUR (€)</option>
+                <option value="GBP">GBP (£)</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md)">
+            <div class="form-group">
+              <label class="form-label">Assign To</label>
+              <select class="form-select" id="ord-assign"></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Deadline</label>
+              <input type="date" class="form-input" id="ord-deadline" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Status</label>
+            <select class="form-select" id="ord-status">
+              <option value="new">🆕 New</option>
+              <option value="in_progress">🔄 In Progress</option>
+              <option value="delivered">📦 Delivered</option>
+              <option value="completed">✅ Completed</option>
+              <option value="done">✅ Done</option>
+              <option value="revision">🔁 Revision</option>
+              <option value="cancelled">❌ Cancelled</option>
+            </select>
+          </div>
+          <input type="hidden" id="ord-edit-id" />
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" id="order-cancel">Cancel</button>
+            <button type="submit" class="btn btn-primary">
+              <span id="ord-btn-text">Add Order</span>
+              <div class="spinner hidden" id="ord-btn-spinner"></div>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+}
 
 const ORDER_STATUSES = {
   new:         { label: 'New',        icon: '🆕', class: 'badge-info' },
@@ -36,6 +114,8 @@ export async function renderFreelanceDashboardPage(userProfile) {
   currentProject = null;
   teamMembers = await TeamService.getMemberOptions();
   await renderProjectsList(userProfile);
+  activeHistoryDate = null;
+  activeHistoryProjectId = null;
 }
 
 // ===========================
@@ -429,6 +509,8 @@ async function openProjectOrders(projectId, userProfile, initialStatus = 'all') 
   const project = allProjects.find(p => p.id === projectId);
   if (!project) return;
   currentProject = project;
+  activeHistoryDate = null;
+  activeHistoryProjectId = null;
   const plat = PLATFORM_INFO[project.platform] || PLATFORM_INFO.direct;
 
   const mainContent = document.getElementById('main-content');
@@ -471,80 +553,7 @@ async function openProjectOrders(projectId, userProfile, initialStatus = 'all') 
       </div>
     </div>
 
-    <!-- Order Modal -->
-    <div class="modal-overlay" id="order-modal-overlay">
-      <div class="modal" style="max-width:580px">
-        <div class="modal-header">
-          <h2 id="order-modal-title">Add Order</h2>
-          <button class="modal-close" id="order-modal-close">✕</button>
-        </div>
-        <form id="order-form">
-          <div class="form-group">
-            <label class="form-label">Order Title *</label>
-            <input type="text" class="form-input" id="ord-title" placeholder="e.g., Logo Design v2" required />
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md)">
-            <div class="form-group">
-              <label class="form-label">📝 Brief / Requirements Link</label>
-              <input type="url" class="form-input" id="ord-brief" placeholder="Google Docs / Notion link" />
-            </div>
-            <div class="form-group">
-              <label class="form-label">🎨 Design Files Link</label>
-              <input type="url" class="form-input" id="ord-design" placeholder="Figma / Drive link" />
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">📦 Deliverable Link</label>
-            <input type="url" class="form-input" id="ord-deliverable" placeholder="Final deliverable link" />
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md)">
-            <div class="form-group">
-              <label class="form-label">Amount</label>
-              <input type="number" class="form-input" id="ord-amount" placeholder="0" min="0" step="0.01" />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Currency</label>
-              <select class="form-select" id="ord-currency">
-                <option value="PKR">PKR (₨)</option>
-                <option value="USD">USD ($)</option>
-                <option value="EUR">EUR (€)</option>
-                <option value="GBP">GBP (£)</option>
-              </select>
-            </div>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md)">
-            <div class="form-group">
-              <label class="form-label">Assign To</label>
-              <select class="form-select" id="ord-assign"></select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Deadline</label>
-              <input type="date" class="form-input" id="ord-deadline" />
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Status</label>
-            <select class="form-select" id="ord-status">
-              <option value="new">🆕 New</option>
-              <option value="in_progress">🔄 In Progress</option>
-              <option value="delivered">📦 Delivered</option>
-              <option value="completed">✅ Completed</option>
-              <option value="done">✅ Done</option>
-              <option value="revision">🔁 Revision</option>
-              <option value="cancelled">❌ Cancelled</option>
-            </select>
-          </div>
-          <input type="hidden" id="ord-edit-id" />
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" id="order-cancel">Cancel</button>
-            <button type="submit" class="btn btn-primary">
-              <span id="ord-btn-text">Add Order</span>
-              <div class="spinner hidden" id="ord-btn-spinner"></div>
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+    ${getOrderModalHTML()}
   `;
 
   await loadOrdersData(userProfile, initialStatus);
@@ -722,6 +731,7 @@ function editOrder(orderId) {
 
 function populateAssignDropdown(selectId, selectedId = '') {
   const select = document.getElementById(selectId);
+  if (!select) return;
   select.innerHTML = `<option value="">— Unassigned —</option>` +
     teamMembers.map(m => `<option value="${m.id}" ${m.id === selectedId ? 'selected' : ''}>${m.full_name} (${m.role})</option>`).join('');
 }
@@ -736,15 +746,32 @@ async function saveOrder(userProfile) {
   btnText.classList.add('hidden'); spinner.classList.remove('hidden');
 
   try {
+    const assignedTo = document.getElementById('ord-assign').value || null;
+    let status = document.getElementById('ord-status').value;
+    const deliverableLink = document.getElementById('ord-deliverable').value.trim();
+
+    // CRM Automation: Handle Status Transitions
+    // CRM Automation: Handle Status Transitions
+    if (deliverableLink) {
+      status = 'done';
+    } else if (!assignedTo) {
+      status = 'new'; // Strictly follow: unassigned -> draft (new)
+    } else {
+      // Assigned but NO link: Ensure it's in an active state
+      if (status === 'done' || status === 'delivered' || status === 'completed' || status === 'new') {
+        status = 'in_progress';
+      }
+    }
+
     const data = {
       title,
       brief_link: document.getElementById('ord-brief').value.trim() || null,
       design_link: document.getElementById('ord-design').value.trim() || null,
-      deliverable_link: document.getElementById('ord-deliverable').value.trim() || null,
+      deliverable_link: deliverableLink || null,
       amount: parseFloat(document.getElementById('ord-amount').value) || 0,
       currency: document.getElementById('ord-currency').value,
-      assigned_to: document.getElementById('ord-assign').value || null,
-      status: document.getElementById('ord-status').value,
+      assigned_to: assignedTo,
+      status: status,
       deadline: document.getElementById('ord-deadline').value || null
     };
 
@@ -758,36 +785,21 @@ async function saveOrder(userProfile) {
       const oldOrder = allOrders.find(o => o.id === editId);
       await ProjectsService.updateOrder(editId, data);
       showToast('Order updated! ✅', 'success');
-
-      // Notify if assignee changed
-      if (data.assigned_to && data.assigned_to !== oldOrder?.assigned_to) {
-        await NotificationsService.createNotification({
-          userId: data.assigned_to,
-          title: '💼 New Order Assigned',
-          message: `You have been assigned to: ${title}`,
-          type: 'order'
-        });
-      }
     } else {
       data.project_id = currentProject.id;
       data.created_by = userProfile.id;
       await ProjectsService.createOrder(data);
       showToast('Order created! 🎉', 'success');
-
-      // Notify assignee if set
-      if (data.assigned_to) {
-        await NotificationsService.createNotification({
-          userId: data.assigned_to,
-          title: '💼 New Order Assigned',
-          message: `You have been assigned to: ${title}`,
-          type: 'order'
-        });
-      }
     }
     
     clearTimeout(safetyTimeout);
     closeModal('order-modal-overlay');
-    await loadOrdersData(userProfile);
+    
+    if (activeHistDate && activeHistProjectId) {
+      await renderHistoricalOrdersView(activeHistProjectId, activeHistDate, userProfile);
+    } else {
+      await loadOrdersData(userProfile);
+    }
   } catch (err) { 
     console.error('Save Order Error:', err);
     showToast('Failed: ' + err.message, 'error'); 
@@ -802,7 +814,12 @@ async function deleteOrder(orderId, userProfile) {
   try {
     await ProjectsService.deleteOrder(orderId);
     showToast('Order deleted', 'success');
-    await loadOrdersData(userProfile);
+    
+    if (activeHistDate && activeHistProjectId) {
+      await renderHistoricalOrdersView(activeHistProjectId, activeHistDate, userProfile);
+    } else {
+      await loadOrdersData(userProfile);
+    }
   } catch (err) { showToast('Failed: ' + err.message, 'error'); }
 }
 
@@ -977,17 +994,20 @@ async function openDailyHistory(projectId, userProfile) {
         </div>
       </div>
 
-      <div id="history-content" class="fade-in">
+      <div id="history-content">
         <div class="skeleton" style="height:100px;margin-bottom:8px;border-radius:var(--radius-lg)"></div>
         <div class="skeleton" style="height:100px;border-radius:var(--radius-lg)"></div>
       </div>
     </div>
+
+    ${getOrderModalHTML()}
   `;
 
   document.getElementById('btn-back-to-project').addEventListener('click', () => {
     openProjectOrders(projectId, userProfile);
   });
 
+  initOrderEvents(userProfile);
   await loadHistoryDates(projectId, userProfile);
 }
 
@@ -996,6 +1016,7 @@ async function loadHistoryDates(projectId, userProfile) {
   try {
     const dates = await ProjectsService.getArchivedOrderDates(projectId);
     
+    if (!container) return;
     if (!dates.length) {
       container.innerHTML = `
         <div class="empty-state">
@@ -1007,6 +1028,7 @@ async function loadHistoryDates(projectId, userProfile) {
       return;
     }
 
+    if (!container) return;
     container.innerHTML = `
       <div class="project-grid">
         ${dates.map(date => `
@@ -1035,8 +1057,14 @@ async function loadHistoryDates(projectId, userProfile) {
   }
 }
 
+let activeHistDate = null;
+let activeHistProjectId = null;
+
 async function renderHistoricalOrdersView(projectId, date, userProfile) {
+  activeHistDate = date;
+  activeHistProjectId = projectId;
   const container = document.getElementById('history-content');
+  if (!container) return;
   
   container.innerHTML = `
     <div class="fade-in">
@@ -1051,6 +1079,8 @@ async function renderHistoricalOrdersView(projectId, date, userProfile) {
   `;
 
   document.getElementById('btn-back-to-history').addEventListener('click', () => {
+    activeHistDate = null;
+    activeHistProjectId = null;
     loadHistoryDates(projectId, userProfile);
   });
 
@@ -1058,18 +1088,27 @@ async function renderHistoricalOrdersView(projectId, date, userProfile) {
     const orders = await ProjectsService.getOrders(projectId, { includeArchived: true });
     // Filter for the specific date (YYYY-MM-DD match)
     const dailyOrders = orders.filter(o => o.created_at.startsWith(date));
+    allOrders = dailyOrders; // Update global state so editOrder can find them
     
     const listContainer = document.getElementById('historical-orders-list');
+    if (!listContainer) return;
     
     if (!dailyOrders.length) {
       listContainer.innerHTML = `<p class="text-muted">No orders found for this date.</p>`;
       return;
     }
 
+    const canEdit = hasPermission(userProfile.role, 'edit_orders');
+    const canDelete = hasPermission(userProfile.role, 'delete_orders');
+
+    if (!listContainer) return;
     listContainer.innerHTML = dailyOrders.map(ord => {
       const st = ORDER_STATUSES[ord.status] || ORDER_STATUSES.new;
       const assignee = ord.assigned_profile;
       
+      // Per-item edit permission: Admins+ OR the assigned user
+      const canEditItem = canEdit || ord.assigned_to === userProfile.id;
+
       return `
         <div class="item-card">
           <div class="item-card-header">
@@ -1077,6 +1116,7 @@ async function renderHistoricalOrdersView(projectId, date, userProfile) {
               <div class="item-card-title">${sanitize(ord.title)}</div>
               <div class="item-card-meta">
                 <span class="badge ${st.class}">${st.icon} ${st.label}</span>
+                <span style="font-weight:600">${formatCurrency(ord.amount, ord.currency || 'PKR')}</span>
                 ${assignee ? `
                   <span style="display:flex;align-items:center;gap:4px">
                     <span class="avatar avatar-xs" style="background:${getAvatarColor(assignee.full_name)};width:20px;height:20px;font-size:8px">${getInitials(assignee.full_name)}</span>
@@ -1086,11 +1126,21 @@ async function renderHistoricalOrdersView(projectId, date, userProfile) {
                 <span>📅 Created ${timeAgo(ord.created_at)}</span>
               </div>
             </div>
-            <div style="font-weight:600;color:var(--text-main)">$${ord.amount || 0}</div>
+            <div style="display:flex;gap:4px">
+              ${canEditItem ? `<button class="btn btn-ghost btn-sm" data-edit-hist-order="${ord.id}">✏️</button>` : ''}
+              ${canDelete ? `<button class="btn btn-ghost btn-sm" data-delete-hist-order="${ord.id}">🗑️</button>` : ''}
+            </div>
           </div>
         </div>
       `;
     }).join('');
+
+    listContainer.querySelectorAll('[data-edit-hist-order]').forEach(btn => {
+      btn.addEventListener('click', () => editOrder(btn.dataset.editHistOrder));
+    });
+    listContainer.querySelectorAll('[data-delete-hist-order]').forEach(btn => {
+      btn.addEventListener('click', () => deleteOrder(btn.dataset.deleteHistOrder, userProfile));
+    });
 
   } catch (err) {
     console.error('Historical orders error:', err);
