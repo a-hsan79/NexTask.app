@@ -114,8 +114,8 @@ export async function renderFreelanceDashboardPage(userProfile) {
   currentProject = null;
   teamMembers = await TeamService.getMemberOptions();
   await renderProjectsList(userProfile);
-  activeHistoryDate = null;
-  activeHistoryProjectId = null;
+  activeHistDate = null;
+  activeHistProjectId = null;
 }
 
 // ===========================
@@ -509,8 +509,8 @@ async function openProjectOrders(projectId, userProfile, initialStatus = 'all') 
   const project = allProjects.find(p => p.id === projectId);
   if (!project) return;
   currentProject = project;
-  activeHistoryDate = null;
-  activeHistoryProjectId = null;
+  activeHistDate = null;
+  activeHistProjectId = null;
   const plat = PLATFORM_INFO[project.platform] || PLATFORM_INFO.direct;
 
   const mainContent = document.getElementById('main-content');
