@@ -30,28 +30,28 @@ export async function renderDashboardPage(userProfile) {
 
       <!-- Stats Cards -->
       <div class="dashboard-stats" id="dashboard-stats">
-        <div class="stat-card purple skeleton-card clickable" id="stat-main-tasks">
+        <div class="stat-card purple skeleton-card clickable stagger-1" id="stat-main-tasks">
           <div class="stat-icon">📋</div>
           <div class="stat-info">
             <div class="stat-label">Active Tasks</div>
             <div class="stat-value" id="stat-tasks">—</div>
           </div>
         </div>
-        <div class="stat-card teal skeleton-card clickable" id="stat-main-orders">
+        <div class="stat-card teal skeleton-card clickable stagger-2" id="stat-main-orders">
           <div class="stat-icon">📦</div>
           <div class="stat-info">
             <div class="stat-label">Active Orders</div>
             <div class="stat-value" id="stat-orders">—</div>
           </div>
         </div>
-        <div class="stat-card green skeleton-card">
+        <div class="stat-card green skeleton-card stagger-3">
           <div class="stat-icon">✅</div>
           <div class="stat-info">
             <div class="stat-label">Completed</div>
             <div class="stat-value" id="stat-completed">—</div>
           </div>
         </div>
-        <div class="stat-card sky skeleton-card clickable" id="stat-main-uploaded">
+        <div class="stat-card sky skeleton-card clickable stagger-4" id="stat-main-uploaded">
           <div class="stat-icon">☁️</div>
           <div class="stat-info">
             <div class="stat-label">Uploaded / Delivered</div>

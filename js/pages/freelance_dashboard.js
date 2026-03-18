@@ -59,56 +59,56 @@ async function renderProjectsList(userProfile) {
 
       <!-- Stats -->
       <div class="dashboard-stats">
-        <div class="stat-card purple clickable" id="stat-fl-projects">
+        <div class="stat-card purple clickable stagger-1" id="stat-fl-projects">
           <div class="stat-icon">📁</div>
           <div class="stat-info">
             <div class="stat-label">Projects</div>
             <div class="stat-value" id="fl-projects-count">—</div>
           </div>
         </div>
-        <div class="stat-card blue clickable" id="stat-fl-total">
+        <div class="stat-card blue clickable stagger-2" id="stat-fl-total">
           <div class="stat-icon">📦</div>
           <div class="stat-info">
             <div class="stat-label">Total Orders</div>
             <div class="stat-value" id="fl-orders-count">—</div>
           </div>
         </div>
-        <div class="stat-card orange clickable" id="stat-fl-active">
+        <div class="stat-card orange clickable stagger-3" id="stat-fl-active">
           <div class="stat-icon">🔄</div>
           <div class="stat-info">
             <div class="stat-label">Active</div>
             <div class="stat-value" id="fl-active">—</div>
           </div>
         </div>
-        <div class="stat-card sky clickable" id="stat-fl-delivered">
+        <div class="stat-card sky clickable stagger-4" id="stat-fl-delivered">
           <div class="stat-icon">📦</div>
           <div class="stat-info">
             <div class="stat-label">Delivered</div>
             <div class="stat-value" id="fl-delivered">—</div>
           </div>
         </div>
-        <div class="stat-card green clickable" id="stat-fl-revenue">
+        <div class="stat-card green clickable stagger-5" id="stat-fl-revenue">
           <div class="stat-icon">💰</div>
           <div class="stat-info">
             <div class="stat-label">Revenue</div>
             <div class="stat-value" id="fl-revenue">—</div>
           </div>
         </div>
-        <div class="stat-card pink clickable" id="stat-fl-unassigned">
+        <div class="stat-card pink clickable stagger-6" id="stat-fl-unassigned">
           <div class="stat-icon">👤</div>
           <div class="stat-info">
             <div class="stat-label">Unassigned</div>
             <div class="stat-value" id="fl-unassigned">—</div>
           </div>
         </div>
-        <div class="stat-card indigo clickable" id="stat-fl-assigned">
+        <div class="stat-card indigo clickable stagger-7" id="stat-fl-assigned">
           <div class="stat-icon">🔄</div>
           <div class="stat-info">
             <div class="stat-label">Assigned</div>
             <div class="stat-value" id="fl-assigned">—</div>
           </div>
         </div>
-        <div class="stat-card teal clickable" id="stat-fl-done">
+        <div class="stat-card teal clickable stagger-8" id="stat-fl-done">
           <div class="stat-icon">✅</div>
           <div class="stat-info">
             <div class="stat-label">Done Orders</div>
@@ -250,7 +250,7 @@ async function renderProjectsGrid(projects, userProfile) {
   grid.innerHTML = projects.map((proj, i) => {
     const plat = PLATFORM_INFO[proj.platform] || PLATFORM_INFO.direct;
     return `
-      <div class="project-card" data-project-id="${proj.id}">
+      <div class="project-card fade-in stagger-${Math.min(i + 1, 5)}" data-project-id="${proj.id}">
         <div class="project-card-actions">
           ${canEdit ? `<button class="btn btn-ghost btn-sm" data-edit-project="${proj.id}">✏️</button>` : ''}
           ${canDelete ? `<button class="btn btn-ghost btn-sm" data-delete-project="${proj.id}">🗑️</button>` : ''}
@@ -915,13 +915,13 @@ function renderGlobalOrdersGrid(orders, userProfile, container) {
     return;
   }
 
-  container.innerHTML = orders.map(ord => {
+  container.innerHTML = orders.map((ord, i) => {
     const st = ORDER_STATUSES[ord.status] || ORDER_STATUSES.new;
     const assignee = ord.assigned_profile;
     const projectName = ord.freelance_projects?.name || 'Unknown Project';
     
     return `
-      <div class="item-card">
+      <div class="item-card fade-in stagger-${Math.min(i + 1, 5)}">
         <div class="item-card-header">
           <div>
             <div style="font-size:var(--font-xs);color:var(--primary);font-weight:600;margin-bottom:4px">📁 ${sanitize(projectName)}</div>

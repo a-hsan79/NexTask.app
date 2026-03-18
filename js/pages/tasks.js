@@ -214,7 +214,7 @@ function renderTasksList(tasks, userProfile) {
     return;
   }
 
-  container.innerHTML = tasks.map(task => {
+  container.innerHTML = tasks.map((task, i) => {
     const st = TASK_STATUSES[task.status] || TASK_STATUSES.pending;
     const prio = PRIORITY_INFO[task.priority] || PRIORITY_INFO.medium;
     const assignee = task.assigned_profile;
@@ -223,7 +223,7 @@ function renderTasksList(tasks, userProfile) {
     const canEditItem = canEdit || task.assigned_to === userProfile.id;
     
     return `
-      <div class="item-card">
+      <div class="item-card fade-in stagger-${Math.min(i + 1, 5)}">
         <div class="item-card-header">
           <div style="flex:1">
             <div class="item-card-title">${sanitize(task.title)}</div>

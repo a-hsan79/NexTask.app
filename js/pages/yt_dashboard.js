@@ -59,56 +59,56 @@ async function renderChannelsList(userProfile) {
 
       <!-- Stats -->
       <div class="dashboard-stats" id="yt-stats">
-        <div class="stat-card purple clickable" id="stat-yt-channels">
+        <div class="stat-card purple clickable stagger-1" id="stat-yt-channels">
           <div class="stat-icon">📺</div>
           <div class="stat-info">
             <div class="stat-label">Channels</div>
             <div class="stat-value" id="yt-channels-count">—</div>
           </div>
         </div>
-        <div class="stat-card blue clickable" id="stat-yt-total">
+        <div class="stat-card blue clickable stagger-2" id="stat-yt-total">
           <div class="stat-icon">🎬</div>
           <div class="stat-info">
             <div class="stat-label">Total Videos</div>
             <div class="stat-value" id="yt-videos-count">—</div>
           </div>
         </div>
-        <div class="stat-card orange clickable" id="stat-yt-progress">
+        <div class="stat-card orange clickable stagger-3" id="stat-yt-progress">
           <div class="stat-icon">✂️</div>
           <div class="stat-info">
             <div class="stat-label">In Progress</div>
             <div class="stat-value" id="yt-in-progress">—</div>
           </div>
         </div>
-        <div class="stat-card green clickable" id="stat-yt-published">
+        <div class="stat-card green clickable stagger-4" id="stat-yt-published">
           <div class="stat-icon">🚀</div>
           <div class="stat-info">
             <div class="stat-label">Published / Done</div>
             <div class="stat-value" id="yt-published">—</div>
           </div>
         </div>
-        <div class="stat-card sky clickable" id="stat-yt-uploaded">
+        <div class="stat-card sky clickable stagger-5" id="stat-yt-uploaded">
           <div class="stat-icon">☁️</div>
           <div class="stat-info">
             <div class="stat-label">Uploaded</div>
             <div class="stat-value" id="yt-uploaded">—</div>
           </div>
         </div>
-        <div class="stat-card pink clickable" id="stat-yt-unassigned">
+        <div class="stat-card pink clickable stagger-6" id="stat-yt-unassigned">
           <div class="stat-icon">👤</div>
           <div class="stat-info">
             <div class="stat-label">Unassigned</div>
             <div class="stat-value" id="yt-unassigned">—</div>
           </div>
         </div>
-        <div class="stat-card indigo clickable" id="stat-yt-assigned">
+        <div class="stat-card indigo clickable stagger-7" id="stat-yt-assigned">
           <div class="stat-icon">📝</div>
           <div class="stat-info">
             <div class="stat-label">Assigned</div>
             <div class="stat-value" id="yt-assigned">—</div>
           </div>
         </div>
-        <div class="stat-card teal clickable" id="stat-yt-done">
+        <div class="stat-card teal clickable stagger-8" id="stat-yt-done">
           <div class="stat-icon">✅</div>
           <div class="stat-info">
             <div class="stat-label">Done Videos</div>
@@ -236,7 +236,7 @@ async function renderChannelsGrid(channels, userProfile) {
   ]);
 
   grid.innerHTML = channels.map((ch, i) => `
-    <div class="project-card" data-channel-id="${ch.id}">
+    <div class="project-card fade-in stagger-${Math.min(i + 1, 5)}" data-channel-id="${ch.id}">
       <div class="project-card-actions">
         ${canEdit ? `<button class="btn btn-ghost btn-sm" data-edit-channel="${ch.id}" title="Edit">✏️</button>` : ''}
         ${canDelete ? `<button class="btn btn-ghost btn-sm" data-delete-channel="${ch.id}" title="Delete">🗑️</button>` : ''}
@@ -604,7 +604,7 @@ function renderVideosList(videos, userProfile) {
     return;
   }
 
-  container.innerHTML = videos.map(vid => {
+  container.innerHTML = videos.map((vid, i) => {
     const st = VIDEO_STATUSES[vid.status] || VIDEO_STATUSES.draft;
     const assignee = vid.assigned_profile;
     
@@ -612,7 +612,7 @@ function renderVideosList(videos, userProfile) {
     const canEditItem = canEdit || vid.assigned_to === userProfile.id;
     
     return `
-      <div class="item-card">
+      <div class="item-card fade-in stagger-${Math.min(i + 1, 5)}">
         <div class="item-card-header">
           <div>
             <div class="item-card-title">${sanitize(vid.title)}</div>

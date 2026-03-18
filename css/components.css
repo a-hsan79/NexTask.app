@@ -36,8 +36,12 @@
 
 .btn-primary:hover {
   background: linear-gradient(135deg, var(--primary-light), var(--primary));
-  box-shadow: 0 6px 20px var(--primary-glow);
-  transform: translateY(-1px);
+  box-shadow: 0 8px 25px var(--primary-glow);
+  transform: translateY(-2px) scale(1.02);
+}
+
+.btn:active {
+  transform: scale(0.96) translateY(0);
 }
 
 .btn-secondary {
@@ -109,7 +113,12 @@
 }
 
 .card:hover {
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-4px) scale(1.01);
+}
+
+.card:active {
+  transform: scale(0.99) translateY(-2px);
 }
 
 .card-glass {
@@ -158,14 +167,18 @@
 }
 
 .stat-card.clickable:hover {
-  box-shadow: 0 8px 30px rgba(0,0,0,0.12);
-  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+  transform: translateY(-6px) scale(1.02);
   border-color: var(--primary-light);
 }
 
+.stat-card.clickable:active {
+  transform: scale(0.98) translateY(-3px);
+}
+
 .stat-card:hover {
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-3px);
 }
 
 .stat-card .stat-icon {
@@ -291,12 +304,13 @@
   max-height: 85vh;
   overflow-y: auto;
   box-shadow: var(--shadow-lg);
-  transform: scale(0.9) translateY(20px);
-  transition: transform var(--transition-normal);
+  transform: scale(0.85) translateY(40px);
+  transition: transform var(--transition-slow);
 }
 
 .modal-overlay.active .modal {
   transform: scale(1) translateY(0);
+  transition-timing-function: var(--apple-spring);
 }
 
 .modal-header {
@@ -420,20 +434,20 @@
   padding: 14px 20px;
   background: var(--bg-card);
   border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
-  min-width: 300px;
-  animation: slideInRight var(--transition-normal) ease;
+  min-width: 320px;
+  animation: appleSlideInRight var(--transition-slow) forwards;
 }
 
-.toast.success { border-left: 4px solid var(--success); }
-.toast.error { border-left: 4px solid var(--danger); }
-.toast.warning { border-left: 4px solid var(--warning); }
-.toast.info { border-left: 4px solid var(--info); }
+.toast.success { border-left: 5px solid var(--success); }
+.toast.error { border-left: 5px solid var(--danger); }
+.toast.warning { border-left: 5px solid var(--warning); }
+.toast.info { border-left: 5px solid var(--info); }
 
-@keyframes slideInRight {
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+@keyframes appleSlideInRight {
+  from { transform: translateX(120%) scale(0.9); opacity: 0; }
+  to { transform: translateX(0) scale(1); opacity: 1; }
 }
 
 /* ===========================
