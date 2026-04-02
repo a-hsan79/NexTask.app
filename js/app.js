@@ -20,6 +20,7 @@ let currentProfile = null;
 let currentPage = 'dashboard';
 let currentSubscriptions = []; // Array of active Supabase Realtime channels
 let isNavigating = false;
+let globalEventsInitialized = false;
 
 // ===========================
 // Initialize App
@@ -479,33 +480,38 @@ function initAppShellEvents() {
     });
   }
 
-  // Escape key closes modal
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      document.getElementById('modal-overlay')?.classList.remove('active');
-    }
-  });
-
-  // Global Lightbox Events
-  const lightbox = document.getElementById('lightbox-overlay');
-  if (lightbox) {
-    lightbox.addEventListener('click', (e) => {
-      if (e.target.id === 'lightbox-overlay' || e.target.id === 'lightbox-close') {
-        lightbox.style.display = 'none';
+  // Global listeners should only be attached once
+  if (!globalEventsInitialized) {
+    // Escape key closes modal
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        document.getElementById('modal-overlay')?.classList.remove('active');
       }
     });
-  }
 
-  // Global Lightbox Function
-  window.showLightbox = (url) => {
-    if (!url) return;
-    const lightboxImg = document.getElementById('lightbox-img');
-    const lightboxOverlay = document.getElementById('lightbox-overlay');
-    if (lightboxImg && lightboxOverlay) {
-      lightboxImg.src = url;
-      lightboxOverlay.style.display = 'flex';
+    // Global Lightbox Events
+    const lightbox = document.getElementById('lightbox-overlay');
+    if (lightbox) {
+      lightbox.addEventListener('click', (e) => {
+        if (e.target.id === 'lightbox-overlay' || e.target.id === 'lightbox-close') {
+          lightbox.style.display = 'none';
+        }
+      });
     }
-  };
+
+    // Global Lightbox Function
+    window.showLightbox = (url) => {
+      if (!url) return;
+      const lightboxImg = document.getElementById('lightbox-img');
+      const lightboxOverlay = document.getElementById('lightbox-overlay');
+      if (lightboxImg && lightboxOverlay) {
+        lightboxImg.src = url;
+        lightboxOverlay.style.display = 'flex';
+      }
+    };
+    
+    globalEventsInitialized = true;
+  }
 }
 
 // ===========================

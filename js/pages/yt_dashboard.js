@@ -110,6 +110,8 @@ function getVideoModalHTML() {
 let currentChannel = null;
 let currentSection = 'automation';
 let moduleUserProfile = null; // New global reference
+let activeHistoryDate = null;
+let activeHistoryChannelId = null;
 
 const VIDEO_STATUSES = {
   draft:     { label: 'Draft',     icon: '📝', class: 'status-draft' },
@@ -1120,9 +1122,6 @@ async function loadHistoryDates(channelId, userProfile) {
     showToast('Failed to load history', 'error');
   }
 }
-
-let activeHistoryDate = null;
-let activeHistoryChannelId = null;
 
 async function renderHistoricalVideosView(channelId, date, userProfile) {
   activeHistoryDate = date;

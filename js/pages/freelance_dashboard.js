@@ -13,6 +13,8 @@ let allOrders = [];
 let teamMembers = [];
 let currentProject = null;
 let moduleUserProfile = null; // New global reference
+let activeHistDate = null;
+let activeHistProjectId = null;
 
 function getOrderModalHTML() {
   return `
@@ -777,7 +779,7 @@ async function saveOrder(userProfile) {
 
     // Safety Timeout: Reset UI if backend hangs for > 30s
     const safetyTimeout = setTimeout(() => {
-      btnText.classList.remove('hidden'); spinner.classList.remove('hidden');
+      btnText.classList.remove('hidden'); spinner.classList.add('hidden');
       showToast('Request is taking too long. Please check your connection.', 'warning');
     }, 30000);
 
@@ -1056,9 +1058,6 @@ async function loadHistoryDates(projectId, userProfile) {
     showToast('Failed to load history', 'error');
   }
 }
-
-let activeHistDate = null;
-let activeHistProjectId = null;
 
 async function renderHistoricalOrdersView(projectId, date, userProfile) {
   activeHistDate = date;
