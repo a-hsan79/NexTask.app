@@ -127,6 +127,31 @@ export const ChannelsService = {
     return { total, done, uploaded };
   },
 
+  // BULK methods to prevent gotrue-js lock contention on massive UI loads
+  async getBulkChannelVideoCounts(channelIds) {
+    if (!channelIds || !channelIds.length) return {};
+    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    
+    const { data, error } = await supabase
+      .from('yt_videos')
+      .select('channel_id, status')
+      .in('channel_id', channelIds)
+      .gte('created_at', dayAgo);
+      
+    if (error) throw error;
+    
+    const res = {};
+    channelIds.forEach(id => res[id] = { total: 0, done: 0, uploaded: 0 });
+    
+    (data || []).forEach(v => {
+      res[v.channel_id].total++;
+      if (v.status === 'published' || v.status === 'done') res[v.channel_id].done++;
+      if (v.status === 'uploaded') res[v.channel_id].uploaded++;
+    });
+    return res;
+  },
+
+
   // Get all video stats across all channels for a specific section (Active only)
   async getAllVideoStats(section = 'automation') {
     const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -187,6 +212,31 @@ export const ChannelsService = {
     // Group by unique YYYY-MM-DD
     const dates = [...new Set((data || []).map(v => v.created_at.split('T')[0]))];
     return dates;
+  },
+
+  async getBulkArchivedVideoDates(channelIds) {
+    if (!channelIds || !channelIds.length) return {};
+    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    
+    const { data, error } = await supabase
+      .from('yt_videos')
+      .select('channel_id, created_at')
+      .in('channel_id', channelIds)
+      .lt('created_at', dayAgo);
+      
+    if (error) throw error;
+    
+    const res = {};
+    channelIds.forEach(id => res[id] = []);
+    
+    (data || []).forEach(v => {
+      res[v.channel_id].push(v.created_at.split('T')[0]);
+    });
+    
+    for (const [id, dates] of Object.entries(res)) {
+      res[id] = [...new Set(dates)];
+    }
+    return res;
   }
 ,
 
