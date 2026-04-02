@@ -172,6 +172,51 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 
 -- ==========================================
+-- 2.5 FORCE-ADD ANY POTENTIALLY MISSING COLUMNS
+-- (If tables already existed, CREATE TABLE IF NOT EXISTS skips them and misses new columns)
+-- ==========================================
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS phone TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_remote BOOLEAN DEFAULT false;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_confirmed BOOLEAN DEFAULT false;
+
+ALTER TABLE yt_channels ADD COLUMN IF NOT EXISTS section TEXT DEFAULT 'automation';
+ALTER TABLE yt_channels ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT false;
+
+ALTER TABLE yt_videos ADD COLUMN IF NOT EXISTS script_v2_link TEXT;
+ALTER TABLE yt_videos ADD COLUMN IF NOT EXISTS voiceover_v2_link TEXT;
+ALTER TABLE yt_videos ADD COLUMN IF NOT EXISTS thumbnail_v2_link TEXT;
+ALTER TABLE yt_videos ADD COLUMN IF NOT EXISTS video_v2_link TEXT;
+ALTER TABLE yt_videos ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT false;
+
+ALTER TABLE freelance_projects ADD COLUMN IF NOT EXISTS platform TEXT DEFAULT 'direct';
+ALTER TABLE freelance_projects ADD COLUMN IF NOT EXISTS client_name TEXT;
+ALTER TABLE freelance_projects ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT false;
+
+ALTER TABLE freelance_orders ADD COLUMN IF NOT EXISTS delivery_link TEXT;
+ALTER TABLE freelance_orders ADD COLUMN IF NOT EXISTS amount NUMERIC DEFAULT 0;
+ALTER TABLE freelance_orders ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT 'PKR';
+ALTER TABLE freelance_orders ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT false;
+ALTER TABLE freelance_orders ADD COLUMN IF NOT EXISTS deadline TIMESTAMPTZ;
+
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS priority TEXT DEFAULT 'medium';
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS due_date TIMESTAMPTZ;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'yt_automation';
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS result_link TEXT;
+
+-- Safely extend checks (Drop first then re-add, to guarantee they update)
+ALTER TABLE yt_videos DROP CONSTRAINT IF EXISTS yt_videos_status_check;
+ALTER TABLE yt_videos ADD CONSTRAINT yt_videos_status_check CHECK (status IN ('draft', 'scripting', 'recording', 'editing', 'uploaded', 'published', 'done'));
+
+ALTER TABLE freelance_orders DROP CONSTRAINT IF EXISTS freelance_orders_status_check;
+ALTER TABLE freelance_orders ADD CONSTRAINT freelance_orders_status_check CHECK (status IN ('new', 'in_progress', 'delivered', 'completed', 'revision', 'cancelled', 'done'));
+
+ALTER TABLE tasks DROP CONSTRAINT IF EXISTS tasks_status_check;
+ALTER TABLE tasks ADD CONSTRAINT tasks_status_check CHECK (status IN ('pending', 'in_progress', 'review', 'completed', 'done'));
+
+ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check;
+ALTER TABLE notifications ADD CONSTRAINT notifications_type_check CHECK (type IN ('task', 'order', 'expense', 'system', 'reminder', 'info', 'success', 'warning', 'error'));
+
+-- ==========================================
 -- 3. APPLY TRIGGERS
 -- ==========================================
 
