@@ -185,7 +185,7 @@ export const ChannelsService = {
     if (error) throw error;
 
     // Group by unique YYYY-MM-DD
-    const dates = [...new Set(data.map(v => v.created_at.split('T')[0]))];
+    const dates = [...new Set((data || []).map(v => v.created_at.split('T')[0]))];
     return dates;
   }
 ,

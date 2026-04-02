@@ -234,7 +234,7 @@ CREATE POLICY "Admins+ can update channels" ON yt_channels FOR UPDATE USING (get
 CREATE POLICY "Admins+ can delete channels" ON yt_channels FOR DELETE USING (get_my_role() IN ('owner', 'admin'));
 
 -- YT VIDEOS
-CREATE POLICY "Assigned users or Admins can view videos" ON yt_videos FOR SELECT USING (get_my_role() IN ('owner', 'admin', 'manager') OR assigned_to = auth.uid() OR created_by = auth.uid());
+CREATE POLICY "Assigned users or Admins can view videos" ON yt_videos FOR SELECT USING (get_my_role() IN ('owner', 'admin', 'manager') OR assigned_to = auth.uid() OR created_by = auth.uid() OR assigned_to IS NULL);
 CREATE POLICY "Admins+ can create videos" ON yt_videos FOR INSERT WITH CHECK (get_my_role() IN ('owner', 'admin', 'manager'));
 CREATE POLICY "Admins+ can update videos" ON yt_videos FOR UPDATE USING (get_my_role() IN ('owner', 'admin', 'manager') OR assigned_to = auth.uid());
 CREATE POLICY "Admins+ can delete videos" ON yt_videos FOR DELETE USING (get_my_role() IN ('owner', 'admin', 'manager'));
@@ -250,13 +250,13 @@ CREATE POLICY "Admins+ can update projects" ON freelance_projects FOR UPDATE USI
 CREATE POLICY "Admins+ can delete projects" ON freelance_projects FOR DELETE USING (get_my_role() IN ('owner', 'admin'));
 
 -- FREELANCE ORDERS
-CREATE POLICY "Assigned users or Admins can view orders" ON freelance_orders FOR SELECT USING (get_my_role() IN ('owner', 'admin', 'manager') OR assigned_to = auth.uid() OR created_by = auth.uid());
+CREATE POLICY "Assigned users or Admins can view orders" ON freelance_orders FOR SELECT USING (get_my_role() IN ('owner', 'admin', 'manager') OR assigned_to = auth.uid() OR created_by = auth.uid() OR assigned_to IS NULL);
 CREATE POLICY "Admins+ can create orders" ON freelance_orders FOR INSERT WITH CHECK (get_my_role() IN ('owner', 'admin', 'manager'));
 CREATE POLICY "Admins+ can update orders" ON freelance_orders FOR UPDATE USING (get_my_role() IN ('owner', 'admin', 'manager') OR assigned_to = auth.uid());
 CREATE POLICY "Admins+ can delete orders" ON freelance_orders FOR DELETE USING (get_my_role() IN ('owner', 'admin', 'manager'));
 
 -- GENERAL TASKS
-CREATE POLICY "Assigned users or Admins can view tasks" ON tasks FOR SELECT USING (get_my_role() IN ('owner', 'admin', 'manager') OR assigned_to = auth.uid() OR created_by = auth.uid());
+CREATE POLICY "Assigned users or Admins can view tasks" ON tasks FOR SELECT USING (get_my_role() IN ('owner', 'admin', 'manager') OR assigned_to = auth.uid() OR created_by = auth.uid() OR assigned_to IS NULL);
 CREATE POLICY "Admins+ can create tasks" ON tasks FOR INSERT WITH CHECK (get_my_role() IN ('owner', 'admin', 'manager'));
 CREATE POLICY "Admins+ can update tasks" ON tasks FOR UPDATE USING (get_my_role() IN ('owner', 'admin', 'manager') OR assigned_to = auth.uid());
 CREATE POLICY "Admins+ can delete tasks" ON tasks FOR DELETE USING (get_my_role() IN ('owner', 'admin', 'manager'));

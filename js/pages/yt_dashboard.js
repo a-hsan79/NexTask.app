@@ -302,7 +302,7 @@ async function loadChannelsData(userProfile, search = '') {
       filtered = allChannels.filter(c => c.name.toLowerCase().includes(s));
     }
 
-    renderChannelsGrid(filtered, userProfile);
+    await renderChannelsGrid(filtered, userProfile);
   } catch (err) {
     console.error('Channels error:', err);
     showToast('Failed to load channels', 'error');
@@ -591,7 +591,7 @@ async function loadVideosData(userProfile, statusFilter = 'all', search = '') {
       status: statusFilter !== 'all' ? statusFilter : undefined,
       search: search || undefined
     });
-    renderVideosList(allVideos, userProfile);
+    await renderVideosList(allVideos, userProfile);
   } catch (err) {
     console.error('Videos error:', err);
     showToast('Failed to load videos', 'error');
