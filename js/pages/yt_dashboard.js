@@ -326,13 +326,14 @@ async function renderChannelsGrid(channels, userProfile) {
     return;
   }
 
-  // Get video counts and archive info for each channel
-  const countsPromises = channels.map(ch => ChannelsService.getChannelVideoCount(ch.id));
-  const archivePromises = channels.map(ch => ChannelsService.getArchivedVideoDates(ch.id));
-  const [counts, archives] = await Promise.all([
-    Promise.all(countsPromises),
-    Promise.all(archivePromises)
-  ]);
+  // Get video counts and archive info for each channel sequentially 
+  // to avoid gotrue-js 'Lock broken by another request with the "steal" option' during burst
+  const counts = [];
+  const archives = [];
+  for (const ch of channels) {
+    counts.push(await ChannelsService.getChannelVideoCount(ch.id));
+    archives.push(await ChannelsService.getArchivedVideoDates(ch.id));
+  }
 
   grid.innerHTML = channels.map((ch, i) => `
     <div class="project-card fade-in stagger-${Math.min(i + 1, 5)}" data-channel-id="${ch.id}">
