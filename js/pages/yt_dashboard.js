@@ -305,7 +305,7 @@ async function loadChannelsData(userProfile, search = '') {
     await renderChannelsGrid(filtered, userProfile);
   } catch (err) {
     console.error('Channels error:', err);
-    showToast('Failed to load channels', 'error');
+    showToast('Channels: ' + (err.message || err.toString() || 'Unknown error'), 'error');
   }
 }
 
@@ -594,7 +594,7 @@ async function loadVideosData(userProfile, statusFilter = 'all', search = '') {
     await renderVideosList(allVideos, userProfile);
   } catch (err) {
     console.error('Videos error:', err);
-    showToast('Failed to load videos', 'error');
+    showToast('Videos: ' + (err.message || err.toString() || 'Unknown error'), 'error');
   }
 }
 
