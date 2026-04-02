@@ -89,8 +89,9 @@ CREATE TABLE IF NOT EXISTS yt_videos (
   voiceover_v2_link TEXT,
   thumbnail_v2_link TEXT,
   video_v2_link TEXT,
+  is_archived BOOLEAN DEFAULT false,
   assigned_to UUID REFERENCES profiles(id),
-  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'scripting', 'recording', 'editing', 'uploaded', 'published')),
+  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'scripting', 'recording', 'editing', 'uploaded', 'published', 'done')),
   created_by UUID REFERENCES profiles(id),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -119,8 +120,10 @@ CREATE TABLE IF NOT EXISTS freelance_orders (
   deliverable_link TEXT,
   amount NUMERIC DEFAULT 0,
   currency TEXT DEFAULT 'PKR',
+  delivery_link TEXT,
+  is_archived BOOLEAN DEFAULT false,
   assigned_to UUID REFERENCES profiles(id),
-  status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'in_progress', 'delivered', 'completed', 'revision', 'cancelled')),
+  status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'in_progress', 'delivered', 'completed', 'revision', 'cancelled', 'done')),
   deadline TIMESTAMPTZ,
   created_by UUID REFERENCES profiles(id),
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -134,10 +137,11 @@ CREATE TABLE IF NOT EXISTS tasks (
   description TEXT,
   assigned_to UUID REFERENCES profiles(id),
   created_by UUID REFERENCES profiles(id),
-  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'in_progress', 'review', 'completed')),
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'in_progress', 'review', 'completed', 'done')),
   priority TEXT DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
   due_date TIMESTAMPTZ,
   category TEXT DEFAULT 'yt_automation' CHECK (category IN ('yt_automation', 'freelance', 'office', 'other')),
+  result_link TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -162,7 +166,7 @@ CREATE TABLE IF NOT EXISTS notifications (
   user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
   message TEXT,
-  type TEXT DEFAULT 'system' CHECK (type IN ('task', 'order', 'expense', 'system', 'reminder')),
+  type TEXT DEFAULT 'system' CHECK (type IN ('task', 'order', 'expense', 'system', 'reminder', 'info', 'success', 'warning', 'error')),
   is_read BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -268,10 +272,10 @@ CREATE POLICY "Admins+ can update expenses" ON expenses FOR UPDATE USING (get_my
 CREATE POLICY "Admins+ can delete expenses" ON expenses FOR DELETE USING (get_my_role() IN ('owner', 'admin'));
 
 -- NOTIFICATIONS
-CREATE POLICY "Users can view own notifications" ON notifications FOR SELECT USING (user_id = auth.uid());
-CREATE POLICY "System can create notifications" ON notifications FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users or Managers can view notifications" ON notifications FOR SELECT USING (user_id = auth.uid() OR get_my_role() IN ('owner', 'admin', 'manager'));
+CREATE POLICY "Managers can create notifications" ON notifications FOR INSERT WITH CHECK (get_my_role() IN ('owner', 'admin', 'manager') OR user_id = auth.uid());
 CREATE POLICY "Users can update own notifications" ON notifications FOR UPDATE USING (user_id = auth.uid());
-CREATE POLICY "Users or Admins can delete notifications" ON notifications FOR DELETE USING (auth.uid() = user_id OR get_my_role() IN ('owner', 'admin'));
+CREATE POLICY "Users or Managers can delete notifications" ON notifications FOR DELETE USING (user_id = auth.uid() OR get_my_role() IN ('owner', 'admin', 'manager'));
 
 -- ==========================================
 -- 6. INDEXES FOR PERFORMANCE
@@ -280,4 +284,46 @@ CREATE INDEX IF NOT EXISTS idx_tasks_assigned ON tasks(assigned_to);
 CREATE INDEX IF NOT EXISTS idx_freelance_orders_assigned ON freelance_orders(assigned_to);
 CREATE INDEX IF NOT EXISTS idx_yt_videos_assigned ON yt_videos(assigned_to);
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
+
+-- ==========================================
+-- 7. STORAGE SETUP: AVATARS BUCKET
+-- ==========================================
+INSERT INTO storage.buckets (id, name, public) VALUES ('avatars', 'avatars', true) ON CONFLICT (id) DO NOTHING;
+
+CREATE POLICY "Public Access" ON storage.objects FOR SELECT USING ( bucket_id = 'avatars' );
+
+CREATE POLICY "Staff Upload Access" ON storage.objects FOR INSERT WITH CHECK (
+  bucket_id = 'avatars' AND (SELECT role FROM public.profiles WHERE id = auth.uid()) IN ('owner', 'admin', 'manager')
+);
+
+CREATE POLICY "Staff Update Access" ON storage.objects FOR UPDATE USING (
+  bucket_id = 'avatars' AND (SELECT role FROM public.profiles WHERE id = auth.uid()) IN ('owner', 'admin', 'manager')
+);
+
+CREATE POLICY "Staff Delete Access" ON storage.objects FOR DELETE USING (
+  bucket_id = 'avatars' AND (SELECT role FROM public.profiles WHERE id = auth.uid()) IN ('owner', 'admin', 'manager')
+);
+
+-- ==========================================
+-- 8. REALTIME CONFIGURATION
+-- ==========================================
+
+ALTER TABLE yt_channels REPLICA IDENTITY FULL;
+DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'yt_channels') THEN ALTER PUBLICATION supabase_realtime ADD TABLE yt_channels; END IF; END $$;
+
+ALTER TABLE yt_videos REPLICA IDENTITY FULL;
+DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'yt_videos') THEN ALTER PUBLICATION supabase_realtime ADD TABLE yt_videos; END IF; END $$;
+
+ALTER TABLE freelance_projects REPLICA IDENTITY FULL;
+DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'freelance_projects') THEN ALTER PUBLICATION supabase_realtime ADD TABLE freelance_projects; END IF; END $$;
+
+ALTER TABLE freelance_orders REPLICA IDENTITY FULL;
+DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'freelance_orders') THEN ALTER PUBLICATION supabase_realtime ADD TABLE freelance_orders; END IF; END $$;
+
+ALTER TABLE tasks REPLICA IDENTITY FULL;
+DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'tasks') THEN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; END IF; END $$;
+
+GRANT USAGE ON SCHEMA public TO anon, authenticated;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon, authenticated;
+
 -- FINISHED!
