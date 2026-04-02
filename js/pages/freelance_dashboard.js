@@ -654,8 +654,8 @@ function renderOrdersList(orders, userProfile) {
           </div>
         </div>
         <div class="link-fields-grid">
-          ${renderLinkField('📝', 'Brief', ord.brief_link)}
-          ${renderLinkField('🎨', 'Design', ord.design_link)}
+          ${renderLinkField('📝', 'Script', ord.script_link)}
+          ${renderLinkField('🎙️', 'Voiceover', ord.voiceover_link)}
           ${renderLinkField('📦', 'Deliverable', ord.deliverable_link)}
         </div>
       </div>
