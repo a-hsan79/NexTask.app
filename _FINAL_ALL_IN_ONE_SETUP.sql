@@ -290,16 +290,20 @@ CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
 -- ==========================================
 INSERT INTO storage.buckets (id, name, public) VALUES ('avatars', 'avatars', true) ON CONFLICT (id) DO NOTHING;
 
+DROP POLICY IF EXISTS "Public Access" ON storage.objects;
 CREATE POLICY "Public Access" ON storage.objects FOR SELECT USING ( bucket_id = 'avatars' );
 
+DROP POLICY IF EXISTS "Staff Upload Access" ON storage.objects;
 CREATE POLICY "Staff Upload Access" ON storage.objects FOR INSERT WITH CHECK (
   bucket_id = 'avatars' AND (SELECT role FROM public.profiles WHERE id = auth.uid()) IN ('owner', 'admin', 'manager')
 );
 
+DROP POLICY IF EXISTS "Staff Update Access" ON storage.objects;
 CREATE POLICY "Staff Update Access" ON storage.objects FOR UPDATE USING (
   bucket_id = 'avatars' AND (SELECT role FROM public.profiles WHERE id = auth.uid()) IN ('owner', 'admin', 'manager')
 );
 
+DROP POLICY IF EXISTS "Staff Delete Access" ON storage.objects;
 CREATE POLICY "Staff Delete Access" ON storage.objects FOR DELETE USING (
   bucket_id = 'avatars' AND (SELECT role FROM public.profiles WHERE id = auth.uid()) IN ('owner', 'admin', 'manager')
 );
