@@ -7,7 +7,7 @@ import { supabase } from './supabase.js';
 export const ExpensesService = {
 
   // Fetch expenses
-  async getExpenses({ category, month, year, limit = 100 } = {}) {
+  async getExpenses({ category, month, year, timeFilter = 'current_month', limit = 100 } = {}) {
     let query = supabase
       .from('expenses')
       .select('*, paid_profile:profiles!expenses_paid_by_fkey(full_name), creator:profiles!expenses_created_by_fkey(full_name)')
@@ -20,6 +20,16 @@ export const ExpensesService = {
       const startDate = new Date(year, month, 1).toISOString().split('T')[0];
       const endDate = new Date(year, month + 1, 0).toISOString().split('T')[0];
       query = query.gte('date', startDate).lte('date', endDate);
+    } else {
+      // Auto-archival mechanism: only fetch this month by default, or older if 'history'
+      const now = new Date();
+      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+      
+      if (timeFilter === 'current_month') {
+        query = query.gte('date', firstDayOfMonth);
+      } else if (timeFilter === 'history') {
+        query = query.lt('date', firstDayOfMonth);
+      }
     }
 
     const { data, error } = await query;

@@ -9,6 +9,7 @@ import { formatCurrency, formatDate, getInitials, getAvatarColor, showToast, san
 
 let allExpenses = [];
 let teamMembers = [];
+let timeFilter = 'current_month';
 
 export async function renderExpensesPage(userProfile) {
   const mainContent = document.getElementById('main-content');
@@ -58,7 +59,7 @@ export async function renderExpensesPage(userProfile) {
       </div>
 
       <!-- Filter -->
-      <div class="filter-bar">
+      <div class="filter-bar" style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:16px;">
         <div class="filter-chips">
           <button class="filter-chip active" data-cat="all">All</button>
           <button class="filter-chip" data-cat="team">👥 Team</button>
@@ -66,6 +67,10 @@ export async function renderExpensesPage(userProfile) {
           <button class="filter-chip" data-cat="software">💻 Software</button>
           <button class="filter-chip" data-cat="equipment">🖥️ Equipment</button>
           <button class="filter-chip" data-cat="other">📦 Other</button>
+        </div>
+        <div class="filter-chips" style="background:var(--bg-panel); padding:4px; border-radius:var(--radius-full);">
+          <button class="filter-chip active" data-time="current_month" style="margin:0;">📅 This Month</button>
+          <button class="filter-chip" data-time="history" style="margin:0;">📜 History</button>
         </div>
       </div>
 
@@ -148,7 +153,8 @@ export async function renderExpensesPage(userProfile) {
 async function loadExpensesData(userProfile, category = 'all') {
   try {
     allExpenses = await ExpensesService.getExpenses({
-      category: category !== 'all' ? category : undefined
+      category: category !== 'all' ? category : undefined,
+      timeFilter: timeFilter
     });
     const stats = await ExpensesService.getMonthlyStats();
 
@@ -191,7 +197,7 @@ function renderExpensesList(expenses, userProfile) {
             <th>Amount</th>
             <th>Paid By</th>
             <th>Date</th>
-            ${canDelete ? '<th>Actions</th>' : ''}
+            ${canDelete ? '<th style="text-align:right">Actions</th>' : ''}
           </tr>
         </thead>
         <tbody>
@@ -215,8 +221,9 @@ function renderExpensesList(expenses, userProfile) {
               </td>
               <td>${formatDate(exp.date)}</td>
               ${canDelete ? `
-              <td>
-                <button class="btn btn-ghost btn-sm" data-delete-expense="${exp.id}">🗑️</button>
+              <td style="text-align:right; white-space:nowrap;">
+                ${['owner', 'admin'].includes(userProfile.role) ? `<button class="btn btn-ghost btn-sm" data-edit-expense="${exp.id}" title="Edit">✏️</button>` : ''}
+                <button class="btn btn-ghost btn-sm" data-delete-expense="${exp.id}" title="Delete">🗑️</button>
               </td>
               ` : ''}
             </tr>
@@ -229,6 +236,13 @@ function renderExpensesList(expenses, userProfile) {
   container.querySelectorAll('[data-delete-expense]').forEach(btn => {
     btn.addEventListener('click', () => deleteExpense(btn.dataset.deleteExpense, userProfile));
   });
+
+  container.querySelectorAll('[data-edit-expense]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const exp = expenses.find(e => e.id === btn.dataset.editExpense);
+      if (exp) openEditExpense(exp);
+    });
+  });
 }
 
 function initExpenseEvents(userProfile) {
@@ -240,6 +254,17 @@ function initExpenseEvents(userProfile) {
       document.querySelectorAll('[data-cat]').forEach(c => c.classList.remove('active'));
       chip.classList.add('active');
       loadExpensesData(userProfile, chip.dataset.cat);
+    });
+  });
+
+  // Time filter
+  document.querySelectorAll('[data-time]').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('[data-time]').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      timeFilter = chip.dataset.time;
+      const activeCat = document.querySelector('[data-cat].active')?.dataset.cat || 'all';
+      loadExpensesData(userProfile, activeCat);
     });
   });
 
@@ -269,6 +294,26 @@ function openNewExpense(userProfile) {
   const select = document.getElementById('exp-paid-by');
   select.innerHTML = `<option value="">— Select —</option>` +
     teamMembers.map(m => `<option value="${m.id}">${m.full_name}</option>`).join('');
+
+  document.getElementById('expense-modal-overlay').classList.add('active');
+}
+
+function openEditExpense(exp) {
+  document.getElementById('expense-modal-title').textContent = 'Update Expense';
+  document.getElementById('expense-btn-text').textContent = 'Save Changes';
+  
+  document.getElementById('exp-edit-id').value = exp.id;
+  document.getElementById('exp-title').value = exp.title;
+  document.getElementById('exp-amount').value = exp.amount;
+  document.getElementById('exp-currency').value = exp.currency || 'PKR';
+  document.getElementById('exp-category').value = exp.category || 'other';
+  document.getElementById('exp-date').value = exp.date ? exp.date.split('T')[0] : '';
+  document.getElementById('exp-notes').value = exp.notes || '';
+
+  const select = document.getElementById('exp-paid-by');
+  select.innerHTML = `<option value="">— Select —</option>` +
+    teamMembers.map(m => `<option value="${m.id}">${m.full_name}</option>`).join('');
+  document.getElementById('exp-paid-by').value = exp.paid_by || '';
 
   document.getElementById('expense-modal-overlay').classList.add('active');
 }
@@ -303,21 +348,28 @@ async function saveExpense(userProfile) {
       showToast('Request is taking too long. Please check your connection.', 'warning');
     }, 30000);
 
-    await ExpensesService.createExpense({
-      title,
-      amount,
-      currency,
-      category,
+    const editId = document.getElementById('exp-edit-id').value;
+    const payload = {
+      title, amount, currency, category, 
       date: date || new Date().toISOString().split('T')[0],
       paid_by: paidBy,
-      created_by: userProfile.id,
       notes
-    });
+    };
+    
+    if (editId) {
+      await ExpensesService.updateExpense(editId, payload);
+      showToast('Expense updated! 💾', 'success');
+    } else {
+      payload.created_by = userProfile.id;
+      await ExpensesService.createExpense(payload);
+      showToast('Expense added! 💰', 'success');
+    }
 
     clearTimeout(safetyTimeout);
-    showToast('Expense added! 💰', 'success');
     closeExpenseModal();
-    await loadExpensesData(userProfile);
+    
+    const activeCat = document.querySelector('[data-cat].active')?.dataset.cat || 'all';
+    await loadExpensesData(userProfile, activeCat);
   } catch (err) {
     console.error('Save expense error:', err);
     showToast('Failed to add expense: ' + err.message, 'error');
