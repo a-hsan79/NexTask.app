@@ -193,7 +193,7 @@ async function renderChannelsList(userProfile) {
             <div class="stat-value" id="yt-uploaded">—</div>
           </div>
         </div>
-        <div class="stat-card pink clickable stagger-6" id="stat-yt-unassigned">
+        <div class="stat-card pink clickable stagger-6" id="stat-yt-unassigned" style="display:none">
           <div class="stat-icon">👤</div>
           <div class="stat-info">
             <div class="stat-label">Unassigned</div>
@@ -295,6 +295,11 @@ async function loadChannelsData(userProfile, search = '') {
     document.getElementById('yt-unassigned').textContent = stats.unassigned;
     document.getElementById('yt-assigned').textContent = stats.assigned;
     document.getElementById('yt-done').textContent = stats.done;
+
+    // Show unassigned stat only for admin/owner/manager
+    const isAdmin = ['owner', 'admin', 'manager'].includes(userProfile.role);
+    const unassignedCard = document.getElementById('stat-yt-unassigned');
+    if (unassignedCard) unassignedCard.style.display = isAdmin ? '' : 'none';
 
     let filtered = allChannels;
     if (search) {
@@ -958,6 +963,12 @@ async function loadGlobalVideosData(userProfile, filterType, search = '') {
 
     let videos = await ChannelsService.getVideos(null, options);
 
+    // Hide unassigned videos from non-admin users
+    const isAdmin = ['owner', 'admin', 'manager'].includes(userProfile.role);
+    if (!isAdmin) {
+      videos = videos.filter(v => v.assigned_to);
+    }
+
     // Manual filtering for complex buckets
     if (filterType === 'in-progress') {
       videos = videos.filter(v => ['scripting', 'recording', 'editing'].includes(v.status));
@@ -1098,7 +1109,8 @@ async function loadHistoryDates(channelId, userProfile) {
     container.innerHTML = `
       <div class="project-grid">
         ${dates.map(date => `
-          <div class="project-card clickable" data-history-date="${date}">
+          <div class="project-card clickable" data-history-date="${date}" style="position:relative">
+            ${hasPermission(userProfile.role, 'delete_anything') ? `<button class="btn btn-ghost btn-sm" data-delete-hist-folder="${date}" style="position:absolute;top:8px;right:8px;z-index:2" title="Delete this folder">🗑️</button>` : ''}
             <div class="project-card-header">
               <div class="project-card-icon">📁</div>
               <div>
@@ -1112,8 +1124,25 @@ async function loadHistoryDates(channelId, userProfile) {
     `;
 
     container.querySelectorAll('[data-history-date]').forEach(card => {
-      card.addEventListener('click', () => {
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('[data-delete-hist-folder]')) return;
         renderHistoricalVideosView(channelId, card.dataset.historyDate, userProfile);
+      });
+    });
+
+    container.querySelectorAll('[data-delete-hist-folder]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const date = btn.dataset.deleteHistFolder;
+        const confirmed = await showConfirmModal('Delete History Folder', `Delete ALL videos from ${formatArchiveDate(date)}? This cannot be undone.`);
+        if (!confirmed) return;
+        try {
+          await ChannelsService.deleteArchivedByDate(channelId, date);
+          showToast('History folder deleted', 'success');
+          await loadHistoryDates(channelId, userProfile);
+        } catch (err) {
+          showToast('Failed to delete: ' + err.message, 'error');
+        }
       });
     });
 

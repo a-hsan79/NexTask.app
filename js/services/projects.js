@@ -181,6 +181,70 @@ export const ProjectsService = {
     // Group by unique YYYY-MM-DD
     const dates = [...new Set(data.map(o => o.created_at.split('T')[0]))];
     return dates;
+  },
+
+  // BULK methods for performance
+  async getBulkProjectOrderCounts(projectIds) {
+    if (!projectIds || !projectIds.length) return {};
+    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    
+    const { data, error } = await supabase
+      .from('freelance_orders')
+      .select('project_id, status')
+      .in('project_id', projectIds)
+      .gte('created_at', dayAgo);
+      
+    if (error) throw error;
+    
+    const res = {};
+    projectIds.forEach(id => res[id] = { total: 0, done: 0, delivered: 0 });
+    
+    (data || []).forEach(o => {
+      res[o.project_id].total++;
+      if (o.status === 'completed' || o.status === 'done') res[o.project_id].done++;
+      if (o.status === 'delivered') res[o.project_id].delivered++;
+    });
+    return res;
+  },
+
+  async getBulkArchivedOrderDates(projectIds) {
+    if (!projectIds || !projectIds.length) return {};
+    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    
+    const { data, error } = await supabase
+      .from('freelance_orders')
+      .select('project_id, created_at')
+      .in('project_id', projectIds)
+      .lt('created_at', dayAgo);
+      
+    if (error) throw error;
+    
+    const res = {};
+    projectIds.forEach(id => res[id] = []);
+    
+    (data || []).forEach(o => {
+      res[o.project_id].push(o.created_at.split('T')[0]);
+    });
+    
+    for (const [id, dates] of Object.entries(res)) {
+      res[id] = [...new Set(dates)];
+    }
+    return res;
+  },
+
+  // Delete all archived items for a specific date
+  async deleteArchivedByDate(projectId, dateStr) {
+    const startOfDay = `${dateStr}T00:00:00.000Z`;
+    const endOfDay = `${dateStr}T23:59:59.999Z`;
+    
+    const { error } = await supabase
+      .from('freelance_orders')
+      .delete()
+      .eq('project_id', projectId)
+      .gte('created_at', startOfDay)
+      .lte('created_at', endOfDay);
+    
+    if (error) throw error;
   }
 ,
 

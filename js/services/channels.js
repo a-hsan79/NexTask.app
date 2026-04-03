@@ -237,6 +237,21 @@ export const ChannelsService = {
       res[id] = [...new Set(dates)];
     }
     return res;
+  },
+
+  // Delete all archived videos for a specific date
+  async deleteArchivedByDate(channelId, dateStr) {
+    const startOfDay = `${dateStr}T00:00:00.000Z`;
+    const endOfDay = `${dateStr}T23:59:59.999Z`;
+    
+    const { error } = await supabase
+      .from('yt_videos')
+      .delete()
+      .eq('channel_id', channelId)
+      .gte('created_at', startOfDay)
+      .lte('created_at', endOfDay);
+    
+    if (error) throw error;
   }
 ,
 

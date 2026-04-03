@@ -52,7 +52,7 @@ export async function renderTasksPage(userProfile) {
             <div class="stat-value" id="tasks-count-active">—</div>
           </div>
         </div>
-        <div class="stat-card pink clickable" data-tfilter="unassigned">
+        <div class="stat-card pink clickable" data-tfilter="unassigned" id="tasks-stat-unassigned" style="display:none">
           <div class="stat-icon">👤</div>
           <div class="stat-info">
             <div class="stat-label">Unassigned</div>
@@ -194,6 +194,16 @@ async function loadTasksData(userProfile, statusFilter = 'all', search = '') {
     document.getElementById('tasks-count-unassigned').textContent = stats.unassigned;
     document.getElementById('tasks-count-assigned').textContent = stats.assigned;
     document.getElementById('tasks-count-done').textContent = stats.done;
+
+    // Show unassigned stat only for admin/owner/manager
+    const isAdmin = ['owner', 'admin', 'manager'].includes(userProfile.role);
+    const unassignedCard = document.getElementById('tasks-stat-unassigned');
+    if (unassignedCard) unassignedCard.style.display = isAdmin ? '' : 'none';
+
+    // Hide unassigned tasks from non-admin users
+    if (!isAdmin) {
+      allTasks = allTasks.filter(t => t.assigned_to);
+    }
 
     renderTasksList(allTasks, userProfile);
   } catch (err) {

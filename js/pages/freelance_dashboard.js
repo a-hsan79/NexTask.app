@@ -40,6 +40,16 @@ function getOrderModalHTML() {
               <input type="url" class="form-input" id="ord-design" placeholder="Figma / Drive link" />
             </div>
           </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md)">
+            <div class="form-group">
+              <label class="form-label">📝 Script Link</label>
+              <input type="url" class="form-input" id="ord-script" placeholder="Google Docs / Notion link" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">🎵 Voiceover Link</label>
+              <input type="url" class="form-input" id="ord-voiceover" placeholder="Drive / Dropbox link" />
+            </div>
+          </div>
           <div class="form-group">
             <label class="form-label">📦 Deliverable Link</label>
             <input type="url" class="form-input" id="ord-deliverable" placeholder="Final deliverable link" />
@@ -176,7 +186,7 @@ async function renderProjectsList(userProfile) {
             <div class="stat-value" id="fl-revenue">—</div>
           </div>
         </div>
-        <div class="stat-card pink clickable stagger-6" id="stat-fl-unassigned">
+        <div class="stat-card pink clickable stagger-6" id="stat-fl-unassigned" style="display:none">
           <div class="stat-icon">👤</div>
           <div class="stat-info">
             <div class="stat-label">Unassigned</div>
@@ -298,6 +308,11 @@ async function loadProjectsData(userProfile, platformFilter = 'all', search = ''
     document.getElementById('fl-assigned').textContent = stats.assigned;
     document.getElementById('fl-done').textContent = stats.done;
 
+    // Show unassigned stat only for admin/owner/manager
+    const isAdmin = ['owner', 'admin', 'manager'].includes(userProfile.role);
+    const unassignedCard = document.getElementById('stat-fl-unassigned');
+    if (unassignedCard) unassignedCard.style.display = isAdmin ? '' : 'none';
+
     renderProjectsGrid(allProjects, userProfile);
   } catch (err) {
     console.error('Projects error:', err);
@@ -321,13 +336,13 @@ async function renderProjectsGrid(projects, userProfile) {
     return;
   }
 
-  // Get order counts and archive info for each project
-  const countsPromises = projects.map(p => ProjectsService.getProjectOrderCount(p.id));
-  const archivePromises = projects.map(p => ProjectsService.getArchivedOrderDates(p.id));
-  const [counts, archives] = await Promise.all([
-    Promise.all(countsPromises),
-    Promise.all(archivePromises)
-  ]);
+  // Get order counts and archive info via BULK queries (performance fix)
+  const projectIds = projects.map(p => p.id);
+  const countsMap = await ProjectsService.getBulkProjectOrderCounts(projectIds);
+  const archivesMap = await ProjectsService.getBulkArchivedOrderDates(projectIds);
+  
+  const counts = projects.map(p => countsMap[p.id] || { total: 0, done: 0, delivered: 0 });
+  const archives = projects.map(p => archivesMap[p.id] || []);
 
   grid.innerHTML = projects.map((proj, i) => {
     const plat = PLATFORM_INFO[proj.platform] || PLATFORM_INFO.direct;
@@ -722,6 +737,8 @@ function editOrder(orderId) {
   document.getElementById('ord-title').value = ord.title;
   document.getElementById('ord-brief').value = ord.brief_link || '';
   document.getElementById('ord-design').value = ord.design_link || '';
+  document.getElementById('ord-script').value = ord.script_link || '';
+  document.getElementById('ord-voiceover').value = ord.voiceover_link || '';
   document.getElementById('ord-deliverable').value = ord.deliverable_link || '';
   document.getElementById('ord-amount').value = ord.amount || '';
   document.getElementById('ord-currency').value = ord.currency || 'PKR';
@@ -769,6 +786,8 @@ async function saveOrder(userProfile) {
       title,
       brief_link: document.getElementById('ord-brief').value.trim() || null,
       design_link: document.getElementById('ord-design').value.trim() || null,
+      script_link: document.getElementById('ord-script').value.trim() || null,
+      voiceover_link: document.getElementById('ord-voiceover').value.trim() || null,
       deliverable_link: deliverableLink || null,
       amount: parseFloat(document.getElementById('ord-amount').value) || 0,
       currency: document.getElementById('ord-currency').value,
@@ -898,6 +917,12 @@ async function loadGlobalOrdersData(userProfile, filterType, search = '') {
     // If filter is 'done', we fetch all and filter in JS to get both completed and done
 
     let orders = await ProjectsService.getOrders(null, options);
+
+    // Hide unassigned orders from non-admin users
+    const isAdmin = ['owner', 'admin', 'manager'].includes(userProfile.role);
+    if (!isAdmin) {
+      orders = orders.filter(o => o.assigned_to);
+    }
 
     // Manual filtering for complex buckets
     if (filterType === 'active') {
@@ -1034,7 +1059,8 @@ async function loadHistoryDates(projectId, userProfile) {
     container.innerHTML = `
       <div class="project-grid">
         ${dates.map(date => `
-          <div class="project-card clickable" data-history-date="${date}">
+          <div class="project-card clickable" data-history-date="${date}" style="position:relative">
+            ${hasPermission(userProfile.role, 'delete_anything') ? `<button class="btn btn-ghost btn-sm" data-delete-hist-folder="${date}" style="position:absolute;top:8px;right:8px;z-index:2" title="Delete this folder">🗑️</button>` : ''}
             <div class="project-card-header">
               <div class="project-card-icon">📁</div>
               <div>
@@ -1048,8 +1074,25 @@ async function loadHistoryDates(projectId, userProfile) {
     `;
 
     container.querySelectorAll('[data-history-date]').forEach(card => {
-      card.addEventListener('click', () => {
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('[data-delete-hist-folder]')) return;
         renderHistoricalOrdersView(projectId, card.dataset.historyDate, userProfile);
+      });
+    });
+
+    container.querySelectorAll('[data-delete-hist-folder]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const date = btn.dataset.deleteHistFolder;
+        const confirmed = await showConfirmModal('Delete History Folder', `Delete ALL orders from ${formatArchiveDate(date)}? This cannot be undone.`);
+        if (!confirmed) return;
+        try {
+          await ProjectsService.deleteArchivedByDate(projectId, date);
+          showToast('History folder deleted', 'success');
+          await loadHistoryDates(projectId, userProfile);
+        } catch (err) {
+          showToast('Failed to delete: ' + err.message, 'error');
+        }
       });
     });
 
