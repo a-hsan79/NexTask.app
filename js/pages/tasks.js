@@ -238,21 +238,24 @@ function renderTasksList(tasks, userProfile) {
     const canEditItem = canEdit || task.assigned_to === userProfile.id;
     
     return `
-      <div class="item-card fade-in stagger-${Math.min(i + 1, 5)}">
+      <div class="item-card fade-in stagger-${Math.min(i + 1, 5)}" data-select-id="${task.id}">
         <div class="item-card-header">
-          <div style="flex:1">
-            <div class="item-card-title">${sanitize(task.title)}</div>
-            <div class="item-card-meta">
-              <span class="badge ${st.class}">${st.icon} ${st.label}</span>
-              <span class="priority-tag ${prio.class}">${prio.icon} ${prio.label}</span>
-              ${assignee ? `
-                <span class="member-tag">
-                  <span class="avatar avatar-xs" style="background:${getAvatarColor(assignee.full_name)};width:18px;height:18px;font-size:8px">${getInitials(assignee.full_name)}</span>
-                  ${assignee.full_name}
-                </span>
-              ` : ''}
-              ${task.due_date ? `<span>⏰ ${formatDate(task.due_date)}</span>` : ''}
-              <span>📅 ${timeAgo(task.created_at)}</span>
+          <div style="display:flex;align-items:flex-start;gap:10px;flex:1">
+            ${canDelete ? `<input type="checkbox" class="item-card-select" data-select-check="${task.id}" />` : ''}
+            <div style="flex:1">
+              <div class="item-card-title">${sanitize(task.title)}</div>
+              <div class="item-card-meta">
+                <span class="badge ${st.class}">${st.icon} ${st.label}</span>
+                <span class="priority-tag ${prio.class}">${prio.icon} ${prio.label}</span>
+                ${assignee ? `
+                  <span class="member-tag">
+                    <span class="avatar avatar-xs" style="background:${getAvatarColor(assignee.full_name)};width:18px;height:18px;font-size:8px">${getInitials(assignee.full_name)}</span>
+                    ${assignee.full_name}
+                  </span>
+                ` : ''}
+                ${task.due_date ? `<span>⏰ ${formatDate(task.due_date)}</span>` : ''}
+                <span>📅 ${timeAgo(task.created_at)}</span>
+              </div>
             </div>
           </div>
           <div class="item-card-actions">
@@ -276,6 +279,9 @@ function renderTasksList(tasks, userProfile) {
   container.querySelectorAll('[data-delete-task]').forEach(btn => {
     btn.addEventListener('click', () => deleteTask(btn.dataset.deleteTask, userProfile));
   });
+
+  // Multi-select bindings
+  initTaskSelectionSystem(container, userProfile);
 }
 
 function initTaskEvents(userProfile) {
@@ -429,4 +435,78 @@ async function deleteTask(taskId, userProfile) {
 
 function closeModal() {
   document.getElementById('task-modal-overlay').classList.remove('active');
+}
+
+// ===========================
+// MULTI-SELECT + BULK ACTION
+// ===========================
+function initTaskSelectionSystem(container, userProfile) {
+  document.getElementById('bulk-bar')?.remove();
+  
+  const bar = document.createElement('div');
+  bar.id = 'bulk-bar';
+  bar.className = 'bulk-action-bar';
+  bar.innerHTML = `
+    <span class="bulk-count" id="bulk-count">0 selected</span>
+    <button class="btn btn-secondary btn-sm" id="bulk-select-all">\u2611 Select All</button>
+    <button class="btn btn-secondary btn-sm" id="bulk-deselect">\u2716 Clear</button>
+    <button class="btn btn-primary btn-sm" id="bulk-delete" style="background:var(--danger,#e74c3c);border-color:var(--danger,#e74c3c)">\ud83d\uddd1\ufe0f Delete Selected</button>
+  `;
+  document.body.appendChild(bar);
+  
+  const selectedIds = new Set();
+  
+  function updateBar() {
+    const count = selectedIds.size;
+    document.getElementById('bulk-count').textContent = `${count} selected`;
+    bar.classList.toggle('visible', count > 0);
+  }
+  
+  container.querySelectorAll('[data-select-check]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const id = cb.dataset.selectCheck;
+      const card = container.querySelector(`[data-select-id="${id}"]`);
+      if (cb.checked) { selectedIds.add(id); card?.classList.add('selected'); }
+      else { selectedIds.delete(id); card?.classList.remove('selected'); }
+      updateBar();
+    });
+  });
+  
+  document.getElementById('bulk-select-all').addEventListener('click', () => {
+    container.querySelectorAll('[data-select-check]').forEach(cb => {
+      cb.checked = true;
+      selectedIds.add(cb.dataset.selectCheck);
+      container.querySelector(`[data-select-id="${cb.dataset.selectCheck}"]`)?.classList.add('selected');
+    });
+    updateBar();
+  });
+  
+  document.getElementById('bulk-deselect').addEventListener('click', () => {
+    container.querySelectorAll('[data-select-check]').forEach(cb => cb.checked = false);
+    container.querySelectorAll('.item-card.selected').forEach(c => c.classList.remove('selected'));
+    selectedIds.clear();
+    updateBar();
+  });
+  
+  document.getElementById('bulk-delete').addEventListener('click', async () => {
+    if (!selectedIds.size) return;
+    const confirmed = await showConfirmModal('Bulk Delete', `Delete ${selectedIds.size} selected task(s)? This cannot be undone.`);
+    if (!confirmed) return;
+    
+    try {
+      for (const id of [...selectedIds]) {
+        await TasksService.deleteTask(id);
+      }
+      showToast(`${selectedIds.size} task(s) deleted`, 'success');
+      selectedIds.clear();
+      bar.classList.remove('visible');
+      
+      const activeStatus = document.querySelector('[data-status].active')?.dataset.status || 'all';
+      const search = document.getElementById('task-search')?.value || '';
+      await loadTasksData(userProfile, activeStatus, search);
+    } catch (err) {
+      console.error('Bulk delete error:', err);
+      showToast('Failed to delete some items', 'error');
+    }
+  });
 }

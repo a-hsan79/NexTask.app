@@ -631,21 +631,24 @@ function renderOrdersList(orders, userProfile) {
     const canEditItem = canEdit || ord.assigned_to === userProfile.id;
     
     return `
-      <div class="item-card">
+      <div class="item-card" data-select-id="${ord.id}">
         <div class="item-card-header">
-          <div>
-            <div class="item-card-title">${sanitize(ord.title)}</div>
-            <div class="item-card-meta">
-              <span class="badge ${st.class}">${st.icon} ${st.label}</span>
-              <span style="font-weight:600">${formatCurrency(ord.amount, ord.currency || 'PKR')}</span>
-              ${assignee ? `
-                <span style="display:flex;align-items:center;gap:4px">
-                  <span class="avatar avatar-xs" style="background:${getAvatarColor(assignee.full_name)};width:20px;height:20px;font-size:8px">${getInitials(assignee.full_name)}</span>
-                  ${assignee.full_name}
-                </span>
-              ` : ''}
-              ${ord.deadline ? `<span>⏰ ${formatDate(ord.deadline)}</span>` : ''}
-              <span>📅 ${timeAgo(ord.created_at)}</span>
+          <div style="display:flex;align-items:flex-start;gap:10px">
+            ${canDelete ? `<input type="checkbox" class="item-card-select" data-select-check="${ord.id}" />` : ''}
+            <div>
+              <div class="item-card-title">${sanitize(ord.title)}</div>
+              <div class="item-card-meta">
+                <span class="badge ${st.class}">${st.icon} ${st.label}</span>
+                <span style="font-weight:600">${formatCurrency(ord.amount, ord.currency || 'PKR')}</span>
+                ${assignee ? `
+                  <span style="display:flex;align-items:center;gap:4px">
+                    <span class="avatar avatar-xs" style="background:${getAvatarColor(assignee.full_name)};width:20px;height:20px;font-size:8px">${getInitials(assignee.full_name)}</span>
+                    ${assignee.full_name}
+                  </span>
+                ` : ''}
+                ${ord.deadline ? `<span>⏰ ${formatDate(ord.deadline)}</span>` : ''}
+                <span>📅 ${timeAgo(ord.created_at)}</span>
+              </div>
             </div>
           </div>
           <div style="display:flex;gap:4px">
@@ -668,6 +671,9 @@ function renderOrdersList(orders, userProfile) {
   container.querySelectorAll('[data-delete-order]').forEach(btn => {
     btn.addEventListener('click', () => deleteOrder(btn.dataset.deleteOrder, userProfile));
   });
+
+  // Multi-select bindings
+  initSelectionSystem(container, 'order', userProfile);
 }
 
 function renderLinkField(icon, label, url) {
@@ -1193,4 +1199,93 @@ async function renderHistoricalOrdersView(projectId, date, userProfile) {
 function formatArchiveDate(dateStr) {
   const d = new Date(dateStr);
   return d.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+// ===========================
+// MULTI-SELECT + BULK ACTION
+// ===========================
+function initSelectionSystem(container, type, userProfile) {
+  // Remove any existing bar
+  document.getElementById('bulk-bar')?.remove();
+  
+  // Add floating bar to DOM
+  const bar = document.createElement('div');
+  bar.id = 'bulk-bar';
+  bar.className = 'bulk-action-bar';
+  bar.innerHTML = `
+    <span class="bulk-count" id="bulk-count">0 selected</span>
+    <button class="btn btn-secondary btn-sm" id="bulk-select-all">\u2611 Select All</button>
+    <button class="btn btn-secondary btn-sm" id="bulk-deselect">\u2716 Clear</button>
+    <button class="btn btn-primary btn-sm" id="bulk-delete" style="background:var(--danger,#e74c3c);border-color:var(--danger,#e74c3c)">\ud83d\uddd1\ufe0f Delete Selected</button>
+  `;
+  document.body.appendChild(bar);
+  
+  const selectedIds = new Set();
+  
+  function updateBar() {
+    const count = selectedIds.size;
+    document.getElementById('bulk-count').textContent = `${count} selected`;
+    bar.classList.toggle('visible', count > 0);
+  }
+  
+  // Checkbox change handler
+  container.querySelectorAll('[data-select-check]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const id = cb.dataset.selectCheck;
+      const card = container.querySelector(`[data-select-id="${id}"]`);
+      if (cb.checked) {
+        selectedIds.add(id);
+        card?.classList.add('selected');
+      } else {
+        selectedIds.delete(id);
+        card?.classList.remove('selected');
+      }
+      updateBar();
+    });
+  });
+  
+  // Select All
+  document.getElementById('bulk-select-all').addEventListener('click', () => {
+    container.querySelectorAll('[data-select-check]').forEach(cb => {
+      cb.checked = true;
+      const id = cb.dataset.selectCheck;
+      selectedIds.add(id);
+      container.querySelector(`[data-select-id="${id}"]`)?.classList.add('selected');
+    });
+    updateBar();
+  });
+  
+  // Clear
+  document.getElementById('bulk-deselect').addEventListener('click', () => {
+    container.querySelectorAll('[data-select-check]').forEach(cb => {
+      cb.checked = false;
+    });
+    container.querySelectorAll('.item-card.selected').forEach(c => c.classList.remove('selected'));
+    selectedIds.clear();
+    updateBar();
+  });
+  
+  // Bulk Delete
+  document.getElementById('bulk-delete').addEventListener('click', async () => {
+    if (!selectedIds.size) return;
+    const confirmed = await showConfirmModal('Bulk Delete', `Delete ${selectedIds.size} selected ${type}(s)? This cannot be undone.`);
+    if (!confirmed) return;
+    
+    try {
+      const ids = [...selectedIds];
+      for (const id of ids) {
+        await ProjectsService.deleteOrder(id);
+      }
+      showToast(`${ids.length} order(s) deleted`, 'success');
+      selectedIds.clear();
+      bar.classList.remove('visible');
+      
+      const activeStatus = document.querySelector('[data-ostatus].active')?.dataset.ostatus || 'all';
+      const search = document.getElementById('order-search')?.value || '';
+      await loadOrdersData(userProfile, activeStatus, search);
+    } catch (err) {
+      console.error('Bulk delete error:', err);
+      showToast('Failed to delete some items', 'error');
+    }
+  });
 }
