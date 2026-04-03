@@ -10,6 +10,7 @@ import { formatCurrency, formatDate, getInitials, getAvatarColor, showToast, san
 let allExpenses = [];
 let teamMembers = [];
 let timeFilter = 'current_month';
+let currentType = 'expense';
 
 export async function renderExpensesPage(userProfile) {
   const mainContent = document.getElementById('main-content');
@@ -18,55 +19,31 @@ export async function renderExpensesPage(userProfile) {
 
   mainContent.innerHTML = `
     <div class="fade-in">
-      <div class="page-header">
+      <div class="page-header" style="margin-bottom:var(--space-md)">
         <div>
-          <h1>💰 Expenses</h1>
-          <p class="subtitle">Track team and office expenses</p>
+          <h1>💳 Ledger</h1>
+          <p class="subtitle">Track business income and expenses</p>
         </div>
         ${canAdd ? `<button class="btn btn-primary" id="btn-new-expense">+ Add Expense</button>` : ''}
       </div>
 
-      <!-- Expense Stats -->
-      <div class="dashboard-stats">
-        <div class="stat-card orange">
-          <div class="stat-icon">💰</div>
-          <div class="stat-info">
-            <div class="stat-label">This Month Total</div>
-            <div class="stat-value" id="exp-total">—</div>
-          </div>
+      <!-- Type Toggle -->
+      <div class="filter-bar" style="margin-bottom:var(--space-xl); border-bottom:1px solid var(--border-color); padding-bottom:var(--space-sm);">
+        <div class="filter-chips">
+          <button class="filter-chip active" data-type="expense" style="font-size:1rem;">💸 Money Out</button>
+          <button class="filter-chip" data-type="income" style="font-size:1rem;">💰 Money In</button>
         </div>
-        <div class="stat-card purple">
-          <div class="stat-icon">👥</div>
-          <div class="stat-info">
-            <div class="stat-label">Team Expenses</div>
-            <div class="stat-value" id="exp-team">—</div>
-          </div>
-        </div>
-        <div class="stat-card teal">
-          <div class="stat-icon">🏢</div>
-          <div class="stat-info">
-            <div class="stat-label">Office Expenses</div>
-            <div class="stat-value" id="exp-office">—</div>
-          </div>
-        </div>
-        <div class="stat-card blue">
-          <div class="stat-icon">💻</div>
-          <div class="stat-info">
-            <div class="stat-label">Software</div>
-            <div class="stat-value" id="exp-software">—</div>
-          </div>
-        </div>
+      </div>
+
+      <!-- Dynamic Expense Stats -->
+      <div class="dashboard-stats" id="dynamic-stats-container">
+        <!-- Injected via render -->
       </div>
 
       <!-- Filter -->
       <div class="filter-bar" style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:16px;">
-        <div class="filter-chips">
-          <button class="filter-chip active" data-cat="all">All</button>
-          <button class="filter-chip" data-cat="team">👥 Team</button>
-          <button class="filter-chip" data-cat="office">🏢 Office</button>
-          <button class="filter-chip" data-cat="software">💻 Software</button>
-          <button class="filter-chip" data-cat="equipment">🖥️ Equipment</button>
-          <button class="filter-chip" data-cat="other">📦 Other</button>
+        <div class="filter-chips" id="dynamic-category-chips">
+          <!-- Injected via render -->
         </div>
         <div class="filter-chips" style="background:var(--bg-panel); padding:4px; border-radius:var(--radius-full);">
           <button class="filter-chip active" data-time="current_month" style="margin:0;">📅 This Month</button>
@@ -154,20 +131,91 @@ async function loadExpensesData(userProfile, category = 'all') {
   try {
     allExpenses = await ExpensesService.getExpenses({
       category: category !== 'all' ? category : undefined,
-      timeFilter: timeFilter
+      timeFilter: timeFilter,
+      typeFilter: currentType
     });
-    const stats = await ExpensesService.getMonthlyStats();
+    const stats = await ExpensesService.getMonthlyStats(currentType);
 
-    document.getElementById('exp-total').textContent = formatCurrency(stats.total);
-    document.getElementById('exp-team').textContent = formatCurrency(stats.team);
-    document.getElementById('exp-office').textContent = formatCurrency(stats.office);
-    document.getElementById('exp-software').textContent = formatCurrency(stats.software);
-
+    renderContextualUI(stats, userProfile);
     renderExpensesList(allExpenses, userProfile);
   } catch (err) {
     console.error('Expenses load error:', err);
-    showToast('Failed to load expenses', 'error');
+    showToast('Failed to load ledger', 'error');
   }
+}
+
+function renderContextualUI(stats, userProfile) {
+  const isIncome = currentType === 'income';
+  
+  // Render Stats
+  const statsContainer = document.getElementById('dynamic-stats-container');
+  if (isIncome) {
+    statsContainer.innerHTML = `
+      <div class="stat-card green">
+        <div class="stat-icon">💰</div><div class="stat-info">
+          <div class="stat-label">Total Money In</div><div class="stat-value">${formatCurrency(stats.total)}</div>
+        </div>
+      </div>
+      <div class="stat-card blue">
+        <div class="stat-icon">▶️</div><div class="stat-info">
+          <div class="stat-label">YouTube Revenue</div><div class="stat-value">${formatCurrency(stats.categories['youtube'] || 0)}</div>
+        </div>
+      </div>
+      <div class="stat-card purple">
+        <div class="stat-icon">💼</div><div class="stat-info">
+          <div class="stat-label">Client Payments</div><div class="stat-value">${formatCurrency(stats.categories['client'] || 0)}</div>
+        </div>
+      </div>
+    `;
+  } else {
+    statsContainer.innerHTML = `
+      <div class="stat-card orange">
+        <div class="stat-icon">💸</div><div class="stat-info">
+          <div class="stat-label">Total Money Out</div><div class="stat-value">${formatCurrency(stats.total)}</div>
+        </div>
+      </div>
+      <div class="stat-card purple">
+        <div class="stat-icon">👥</div><div class="stat-info">
+          <div class="stat-label">Team Expenses</div><div class="stat-value">${formatCurrency(stats.categories['team'] || 0)}</div>
+        </div>
+      </div>
+      <div class="stat-card teal">
+        <div class="stat-icon">🏢</div><div class="stat-info">
+          <div class="stat-label">Office & Software</div><div class="stat-value">${formatCurrency((stats.categories['office'] || 0) + (stats.categories['software'] || 0))}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  // Render Filters
+  const activeCat = document.querySelector('[data-cat].active')?.dataset.cat || 'all';
+  const filterHtml = isIncome ? `
+      <button class="filter-chip ${activeCat==='all'?'active':''}" data-cat="all">All</button>
+      <button class="filter-chip ${activeCat==='youtube'?'active':''}" data-cat="youtube">▶️ YouTube</button>
+      <button class="filter-chip ${activeCat==='client'?'active':''}" data-cat="client">💼 Client</button>
+      <button class="filter-chip ${activeCat==='refund'?'active':''}" data-cat="refund">🔄 Refund</button>
+      <button class="filter-chip ${activeCat==='investment'?'active':''}" data-cat="investment">📈 Investment</button>
+      <button class="filter-chip ${activeCat==='other'?'active':''}" data-cat="other">📦 Other</button>
+  ` : `
+      <button class="filter-chip ${activeCat==='all'?'active':''}" data-cat="all">All</button>
+      <button class="filter-chip ${activeCat==='team'?'active':''}" data-cat="team">👥 Team</button>
+      <button class="filter-chip ${activeCat==='office'?'active':''}" data-cat="office">🏢 Office</button>
+      <button class="filter-chip ${activeCat==='software'?'active':''}" data-cat="software">💻 Software</button>
+      <button class="filter-chip ${activeCat==='equipment'?'active':''}" data-cat="equipment">🖥️ Equipment</button>
+      <button class="filter-chip ${activeCat==='other'?'active':''}" data-cat="other">📦 Other</button>
+  `;
+  const filterContainer = document.getElementById('dynamic-category-chips');
+  filterContainer.innerHTML = filterHtml;
+
+  // Rebind filter events
+  filterContainer.querySelectorAll('[data-cat]').forEach(chip => {
+    chip.addEventListener('click', () => {
+      filterContainer.querySelectorAll('[data-cat]').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      const timeCat = document.querySelector('[data-time].active')?.dataset.time || 'current_month';
+      loadExpensesData(userProfile, chip.dataset.cat);
+    });
+  });
 }
 
 function renderExpensesList(expenses, userProfile) {
@@ -257,6 +305,22 @@ function initExpenseEvents(userProfile) {
     });
   });
 
+  const isIncome = currentType === 'income';
+
+  document.querySelectorAll('[data-type]').forEach(chip => {
+    chip.addEventListener('click', () => {
+      if (chip.dataset.type === currentType) return;
+      document.querySelectorAll('[data-type]').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      currentType = chip.dataset.type;
+      
+      const btnNew = document.getElementById('btn-new-expense');
+      if (btnNew) btnNew.textContent = isIncome ? '+ Add Expense' : '+ Add Income';
+
+      loadExpensesData(userProfile, 'all');
+    });
+  });
+
   // Time filter
   document.querySelectorAll('[data-time]').forEach(chip => {
     chip.addEventListener('click', () => {
@@ -281,11 +345,33 @@ function initExpenseEvents(userProfile) {
   });
 }
 
+function getModalCategories() {
+  if (currentType === 'income') {
+    return `
+      <option value="youtube">▶️ YouTube Revenue</option>
+      <option value="client">💼 Client Payment</option>
+      <option value="refund">🔄 Refund</option>
+      <option value="investment">📈 Investment</option>
+      <option value="other">📦 Other</option>
+    `;
+  }
+  return `
+    <option value="team">👥 Team</option>
+    <option value="office">🏢 Office</option>
+    <option value="software">💻 Software</option>
+    <option value="equipment">🖥️ Equipment</option>
+    <option value="other">📦 Other</option>
+  `;
+}
+
 function openNewExpense(userProfile) {
-  document.getElementById('expense-modal-title').textContent = 'Add Expense';
-  document.getElementById('expense-btn-text').textContent = 'Add Expense';
+  const isIncome = currentType === 'income';
+  document.getElementById('expense-modal-title').textContent = isIncome ? 'Add Income' : 'Add Expense';
+  document.getElementById('expense-btn-text').textContent = isIncome ? 'Add Income' : 'Add Expense';
   document.getElementById('exp-edit-id').value = '';
   document.getElementById('expense-form').reset();
+  
+  document.getElementById('exp-category').innerHTML = getModalCategories();
 
   // Set today's date
   document.getElementById('exp-date').value = new Date().toISOString().split('T')[0];
@@ -299,13 +385,15 @@ function openNewExpense(userProfile) {
 }
 
 function openEditExpense(exp) {
-  document.getElementById('expense-modal-title').textContent = 'Update Expense';
+  const isIncome = currentType === 'income';
+  document.getElementById('expense-modal-title').textContent = isIncome ? 'Update Income' : 'Update Expense';
   document.getElementById('expense-btn-text').textContent = 'Save Changes';
   
   document.getElementById('exp-edit-id').value = exp.id;
   document.getElementById('exp-title').value = exp.title;
   document.getElementById('exp-amount').value = exp.amount;
   document.getElementById('exp-currency').value = exp.currency || 'PKR';
+  document.getElementById('exp-category').innerHTML = getModalCategories();
   document.getElementById('exp-category').value = exp.category || 'other';
   document.getElementById('exp-date').value = exp.date ? exp.date.split('T')[0] : '';
   document.getElementById('exp-notes').value = exp.notes || '';
@@ -351,6 +439,7 @@ async function saveExpense(userProfile) {
     const editId = document.getElementById('exp-edit-id').value;
     const payload = {
       title, amount, currency, category, 
+      type: currentType,
       date: date || new Date().toISOString().split('T')[0],
       paid_by: paidBy,
       notes

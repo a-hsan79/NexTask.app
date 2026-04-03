@@ -203,6 +203,8 @@ ALTER TABLE tasks ADD COLUMN IF NOT EXISTS due_date TIMESTAMPTZ;
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'yt_automation';
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS result_link TEXT;
 
+ALTER TABLE expenses ADD COLUMN IF NOT EXISTS type TEXT DEFAULT 'expense';
+
 -- Safely extend checks (Drop first then re-add, to guarantee they update)
 ALTER TABLE yt_videos DROP CONSTRAINT IF EXISTS yt_videos_status_check;
 ALTER TABLE yt_videos ADD CONSTRAINT yt_videos_status_check CHECK (status IN ('draft', 'scripting', 'recording', 'editing', 'uploaded', 'published', 'done'));
@@ -215,6 +217,10 @@ ALTER TABLE tasks ADD CONSTRAINT tasks_status_check CHECK (status IN ('pending',
 
 ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check;
 ALTER TABLE notifications ADD CONSTRAINT notifications_type_check CHECK (type IN ('task', 'order', 'expense', 'system', 'reminder', 'info', 'success', 'warning', 'error'));
+
+ALTER TABLE expenses DROP CONSTRAINT IF EXISTS expenses_category_check;
+ALTER TABLE expenses DROP CONSTRAINT IF EXISTS expenses_type_check;
+ALTER TABLE expenses ADD CONSTRAINT expenses_type_check CHECK (type IN ('expense', 'income'));
 
 -- ==========================================
 -- 3. APPLY TRIGGERS

@@ -7,10 +7,11 @@ import { supabase } from './supabase.js';
 export const ExpensesService = {
 
   // Fetch expenses
-  async getExpenses({ category, month, year, timeFilter = 'current_month', limit = 100 } = {}) {
+  async getExpenses({ category, month, year, timeFilter = 'current_month', typeFilter = 'expense', limit = 100 } = {}) {
     let query = supabase
       .from('expenses')
       .select('*, paid_profile:profiles!expenses_paid_by_fkey(full_name), creator:profiles!expenses_created_by_fkey(full_name)')
+      .eq('type', typeFilter)
       .order('date', { ascending: false })
       .limit(limit);
 
@@ -70,24 +71,26 @@ export const ExpensesService = {
   },
 
   // Get expense stats for current month
-  async getMonthlyStats() {
+  async getMonthlyStats(typeFilter = 'expense') {
     const now = new Date();
     const startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
     const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
 
     const { data, error } = await supabase
       .from('expenses')
-      .select('amount, category, currency')
+      .select('amount, category, currency, type')
+      .eq('type', typeFilter)
       .gte('date', startDate)
       .lte('date', endDate);
 
     if (error) throw error;
 
-    const stats = { total: 0, team: 0, office: 0, software: 0, equipment: 0, other: 0, count: 0 };
+    const stats = { total: 0, count: 0, categories: {} };
     (data || []).forEach(e => {
       stats.total += (e.amount || 0);
       stats.count++;
-      if (stats[e.category] !== undefined) stats[e.category] += (e.amount || 0);
+      if (!stats.categories[e.category]) stats.categories[e.category] = 0;
+      stats.categories[e.category] += (e.amount || 0);
     });
     return stats;
   }
