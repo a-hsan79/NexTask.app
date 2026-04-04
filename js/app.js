@@ -14,6 +14,7 @@ import { renderTasksPage } from './pages/tasks.js';
 import { renderExpensesPage } from './pages/expenses.js';
 import { renderSettingsPage } from './pages/settings.js';
 import { renderAISEOPage } from './pages/ai_seo.js';
+import { renderAIChatPage } from './pages/ai_chat.js';
 
 // App State
 let currentUser = null;
@@ -341,6 +342,9 @@ async function navigateTo(page, skipPushState = false) {
           break;
         case 'ai_seo':
           await renderAISEOPage(currentProfile);
+          break;
+        case 'ai_chat':
+          await renderAIChatPage(currentProfile);
           break;
         default:
           renderComingSoon('Page Not Found', '🔍', 'This page doesn\'t exist.');

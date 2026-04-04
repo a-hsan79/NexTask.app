@@ -139,29 +139,15 @@ export async function renderDashboardPage(userProfile) {
           </div>
           ` : ''}
 
-          <!-- 🤖 NexTube AI Chatbot Card -->
-          <div class="card ai-assistant-card" style="margin-bottom: var(--space-lg); border: 1px solid var(--primary-glow); display: flex; flex-direction: column; max-height: 500px">
-            <h3 style="margin-bottom: var(--space-sm); display:flex; align-items:center; gap:8px">🤖 NexTube AI Chatbot</h3>
-            <p class="subtitle" style="margin-bottom: var(--space-md)">Ask anything! I remember our conversation.</p>
-            
-            <!-- Chat History -->
-            <div id="dash-chat-history" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; padding-right: 5px; min-height: 150px; max-height: 300px">
-              <div class="chat-msg msg-ai">Hello! How can I help you today?</div>
-            </div>
-
-            <div class="ai-chat-box" style="border-top: 1px solid var(--border-light); padding-top: 15px">
-              <div id="dash-ai-preview" class="hidden" style="margin-bottom:10px"></div>
-              
-              <div style="position:relative; display:flex; gap:8px; align-items: flex-end">
-                <div style="flex:1; position:relative">
-                  <textarea id="dash-ai-input" class="form-textarea" placeholder="Type a message..." style="min-height:45px; max-height:120px; padding-left:40px; padding-top:10px; font-size:var(--font-sm)"></textarea>
-                  <button class="btn-icon" id="dash-ai-attach" style="position:absolute; left:10px; bottom:12px; opacity:0.6; background:transparent; border:none; cursor:pointer" title="Attach file">📎</button>
-                  <input type="file" id="dash-ai-file" class="hidden" accept="image/*,application/pdf" />
-                </div>
-                <button class="btn btn-primary" id="btn-dash-ai-send" style="padding: 10px; border-radius: 50%; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center">
-                  <span style="font-size: 1.2rem; transform: rotate(45deg); margin-left: -2px; margin-top: -2px">🚀</span>
-                </button>
+          <!-- 🤖 NexTube AI Hub Card -->
+          <div class="card ai-hub-card clickable" onclick="window.dispatchEvent(new CustomEvent('navigate', { detail: { page: 'ai_chat' } }))" style="margin-bottom: var(--space-lg); border: 2px solid var(--primary-glow); background: linear-gradient(135deg, var(--bg-card), rgba(108, 92, 231, 0.1)); cursor: pointer; transition: all 0.3s var(--apple-spring)">
+            <div style="display:flex; align-items:center; gap:var(--space-md); padding:var(--space-xs)">
+              <div class="ai-icon-pulse" style="font-size:2.5rem; filter: drop-shadow(0 0 10px var(--primary))">🤖</div>
+              <div style="flex:1">
+                <h3 style="margin-bottom: 2px">NexTube AI Assistant</h3>
+                <p class="subtitle" style="margin-bottom: 0">Open full-screen chat with memory support</p>
               </div>
+              <div style="font-size:1.2rem; opacity:0.5">→</div>
             </div>
           </div>
 
@@ -446,94 +432,4 @@ function initDashboardEvents() {
       localStorage.setItem('theme', isDark ? 'light' : 'dark');
     });
   }
-
-  // Dashboard AI Chatbot Logic
-  const dashAIInput = document.getElementById('dash-ai-input');
-  const dashAIFile = document.getElementById('dash-ai-file');
-  const dashAIAttach = document.getElementById('dash-ai-attach');
-  const dashAIPreview = document.getElementById('dash-ai-preview');
-  const chatHistoryEl = document.getElementById('dash-chat-history');
-  const btnSend = document.getElementById('btn-dash-ai-send');
-  
-  let dashAttachments = [];
-  let conversationHistory = []; // { role: "user" | "assistant", content: string }
-
-  dashAIAttach?.addEventListener('click', () => dashAIFile.click());
-
-  dashAIFile?.addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (re) => {
-        const base64 = re.target.result;
-        dashAttachments = [base64];
-        dashAIPreview.innerHTML = `
-          <div class="attachment-card" style="display:inline-flex; align-items:center; gap:5px; background:var(--bg-input); padding:4px 8px; border-radius:4px; font-size:10px">
-            <span>📎 ${file.name}</span>
-            <span style="color:var(--danger); cursor:pointer" id="dash-ai-remove-file">×</span>
-          </div>
-        `;
-        dashAIPreview.classList.remove('hidden');
-        document.getElementById('dash-ai-remove-file').onclick = () => {
-          dashAttachments = [];
-          dashAIPreview.classList.add('hidden');
-          dashAIFile.value = '';
-        };
-      };
-      reader.readAsDataURL(file);
-    }
-  });
-
-  const appendMessage = (role, content) => {
-    const div = document.createElement('div');
-    div.className = `chat-msg msg-${role}`;
-    div.style = role === 'user' 
-      ? 'background:var(--primary); color:white; align-self:flex-end; padding:8px 12px; border-radius:12px 12px 0 12px; font-size:0.85rem; max-width:85%'
-      : 'background:var(--bg-secondary); border:1px solid var(--border-light); align-self:flex-start; padding:8px 12px; border-radius:12px 12px 12px 0; font-size:0.85rem; max-width:85%';
-    div.innerHTML = sanitize(content).replace(/\n/g, '<br>');
-    chatHistoryEl.appendChild(div);
-    chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight;
-  };
-
-  const handleSend = async () => {
-    const message = dashAIInput.value.trim();
-    if (!message && dashAttachments.length === 0) return;
-
-    // UI Feedback
-    appendMessage('user', message);
-    dashAIInput.value = '';
-    dashAIInput.style.height = '45px';
-    
-    const typingDiv = document.createElement('div');
-    typingDiv.className = 'chat-msg msg-ai typing';
-    typingDiv.innerHTML = '<div class="spinner spinner-xs"></div> Assistant is thinking...';
-    chatHistoryEl.appendChild(typingDiv);
-    chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight;
-
-    try {
-      const result = await AIService.callChat(message, conversationHistory, dashAttachments);
-      typingDiv.remove();
-      appendMessage('assistant', result);
-      
-      // Update local history
-      conversationHistory.push({ role: "user", content: message });
-      conversationHistory.push({ role: "assistant", content: result });
-      
-      // Cleanup attachments
-      dashAttachments = [];
-      dashAIPreview.classList.add('hidden');
-      dashAIFile.value = '';
-    } catch (err) {
-      typingDiv.innerHTML = `<span style="color:var(--danger)">Error: ${err.message}</span>`;
-      showToast(err.message, 'error');
-    }
-  };
-
-  btnSend?.addEventListener('click', handleSend);
-  dashAIInput?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  });
 }
