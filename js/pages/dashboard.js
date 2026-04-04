@@ -10,6 +10,9 @@ import { ChannelsService } from '../services/channels.js';
 import { ProjectsService } from '../services/projects.js';
 import { TasksService } from '../services/tasks.js';
 
+import { AIService } from '../services/ai.js';
+import { renderAISEOPage } from './ai_seo.js';
+
 export async function renderDashboardPage(userProfile) {
   const mainContent = document.getElementById('main-content');
   const role = userProfile.role;
@@ -135,6 +138,32 @@ export async function renderDashboardPage(userProfile) {
             </div>
           </div>
           ` : ''}
+
+          <!-- 🤖 Quick AI Assistant Card -->
+          <div class="card ai-assistant-card" style="margin-bottom: var(--space-lg); border: 1px solid var(--primary-glow)">
+            <h3 style="margin-bottom: var(--space-sm); display:flex; align-items:center; gap:8px">🤖 NexTube AI Assistant</h3>
+            <p class="subtitle" style="margin-bottom: var(--space-md)">Generate titles or a 300-word description instantly.</p>
+            
+            <div class="ai-chat-box">
+              <div style="position:relative; margin-bottom:12px">
+                <textarea id="dash-ai-input" class="form-textarea" placeholder="Describe your video topic..." style="min-height:80px; padding-left:40px"></textarea>
+                <button class="btn-icon" id="dash-ai-attach" style="position:absolute; left:10px; top:10px; opacity:0.6; background:transparent; border:none; cursor:pointer" title="Attach file">📎</button>
+                <input type="file" id="dash-ai-file" class="hidden" accept="image/*,application/pdf" />
+              </div>
+              
+              <div id="dash-ai-preview" class="hidden" style="margin-bottom:12px"></div>
+
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+                <button class="btn btn-secondary btn-sm" id="btn-dash-ai-titles">🔥 Get Titles</button>
+                <button class="btn btn-secondary btn-sm" id="btn-dash-ai-desc">📝 Full Description</button>
+              </div>
+            </div>
+
+            <div id="dash-ai-results" class="hidden" style="margin-top:15px; padding-top:15px; border-top:1px solid var(--border-light)">
+              <div class="ai-text-content" style="font-size:var(--font-xs); max-height:200px; overflow-y:auto; background:var(--bg-secondary); padding:var(--space-md); border-radius:var(--radius-md)"></div>
+              <button class="btn btn-ghost btn-sm" id="btn-dash-ai-copy" style="width:100%; margin-top:8px">📋 Copy Result</button>
+            </div>
+          </div>
 
           <!-- Team Overview -->
           ${hasPermission(role, 'view_team_stats') ? `
@@ -417,4 +446,83 @@ function initDashboardEvents() {
       localStorage.setItem('theme', isDark ? 'light' : 'dark');
     });
   }
+
+  // Dashboard AI Assistant Logic
+  const dashAIInput = document.getElementById('dash-ai-input');
+  const dashAIFile = document.getElementById('dash-ai-file');
+  const dashAIAttach = document.getElementById('dash-ai-attach');
+  const dashAIPreview = document.getElementById('dash-ai-preview');
+  const dashAIResults = document.getElementById('dash-ai-results');
+  const dashAIContent = dashAIResults?.querySelector('.ai-text-content');
+  
+  let dashAttachments = [];
+
+  dashAIAttach?.addEventListener('click', () => dashAIFile.click());
+
+  dashAIFile?.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (re) => {
+        const base64 = re.target.result;
+        dashAttachments = [base64];
+        dashAIPreview.innerHTML = `
+          <div class="attachment-card" style="display:inline-flex; align-items:center; gap:5px; background:var(--bg-input); padding:4px 8px; border-radius:4px; font-size:10px">
+            <span>📎 ${file.name}</span>
+            <span style="color:var(--danger); cursor:pointer" id="dash-ai-remove-file">×</span>
+          </div>
+        `;
+        dashAIPreview.classList.remove('hidden');
+        document.getElementById('dash-ai-remove-file').onclick = () => {
+          dashAttachments = [];
+          dashAIPreview.classList.add('hidden');
+          dashAIFile.value = '';
+        };
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  const runDashboardAI = async (mode) => {
+    const prompt = dashAIInput.value.trim();
+    if (!prompt && dashAttachments.length === 0) {
+      showToast('Please provide a topic or file', 'warning');
+      return;
+    }
+
+    dashAIResults.classList.remove('hidden');
+    dashAIContent.innerHTML = '<div class="spinner spinner-sm"></div> Performing AI Magic...';
+
+    try {
+      let finalPrompt = "";
+      if (mode === 'titles') {
+        finalPrompt = `Generate 5 High-CTR YouTube titles for: ${prompt}. Wrap each in [TITLE] tags.`;
+      } else {
+        finalPrompt = `Act as an expert YouTube SEO agent. Write a 300-word detailed video description for: ${prompt}. Use the 5-part format (Summary, 3 Highlights, Social, Disclaimer, 10 Tags).`;
+      }
+
+      const result = await AIService.callModel(finalPrompt, dashAttachments);
+      dashAIContent.innerHTML = formatAIResult(result);
+      dashAIResults.dataset.raw = result;
+    } catch (err) {
+      showToast(err.message, 'error');
+      dashAIContent.innerHTML = 'Error: ' + err.message;
+    }
+  };
+
+  document.getElementById('btn-dash-ai-titles')?.addEventListener('click', () => runDashboardAI('titles'));
+  document.getElementById('btn-dash-ai-desc')?.addEventListener('click', () => runDashboardAI('desc'));
+
+  document.getElementById('btn-dash-ai-copy')?.addEventListener('click', () => {
+    const raw = dashAIResults.dataset.raw;
+    if (raw) {
+      navigator.clipboard.writeText(raw);
+      showToast('Result copied!', 'success');
+    }
+  });
+}
+
+function formatAIResult(text) {
+  // Simple cleanup of tags for the preview
+  return text.replace(/\[\/?TITLE\]/g, '').replace(/\[\/?DESC\]/g, '').replace(/\[\/?TAGS\]/g, '').trim();
 }

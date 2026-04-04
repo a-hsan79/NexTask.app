@@ -119,6 +119,16 @@ export async function renderSettingsPage(userProfile) {
 
           <div class="form-group">
             <label class="form-label">Preferred AI Model</label>
+            <select class="form-select" id="settings-ai-model">
+              <optgroup label="Free Models">
+                <option value="openrouter/auto" ${localStorage.getItem('ai_model') === 'openrouter/auto' ? 'selected' : ''}>Auto (Free Selection)</option>
+                <option value="meta-llama/llama-3.1-405b-instruct" ${localStorage.getItem('ai_model') === 'meta-llama/llama-3.1-405b-instruct' ? 'selected' : ''}>Llama 3.1 405B (Free-tier)</option>
+              </optgroup>
+              <optgroup label="Premium Performance">
+                <option value="anthropic/claude-3.5-sonnet" ${localStorage.getItem('ai_model') === 'anthropic/claude-3.5-sonnet' ? 'selected' : ''}>Claude 3.5 Sonnet (Recommended)</option>
+                <option value="openai/gpt-4o-2024-08-06" ${localStorage.getItem('ai_model') === 'openai/gpt-4o-2024-08-06' ? 'selected' : ''}>GPT-4o (Omni)</option>
+                <option value="google/gemini-pro-1.5" ${localStorage.getItem('ai_model') === 'google/gemini-pro-1.5' ? 'selected' : ''}>Gemini Pro 1.5</option>
+              </optgroup>
             </select>
           </div>
 
