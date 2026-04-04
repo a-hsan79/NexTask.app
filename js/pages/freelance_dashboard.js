@@ -1189,6 +1189,7 @@ async function renderHistoricalOrdersView(projectId, date, userProfile) {
               </div>
             </div>
             <div style="display:flex;gap:4px">
+              ${canDelete ? `<button class="btn btn-ghost btn-sm" data-restore-hist-order="${ord.id}" title="Restore from History">↩️</button>` : ''}
               ${canEditItem ? `<button class="btn btn-ghost btn-sm" data-edit-hist-order="${ord.id}">✏️</button>` : ''}
               ${canDelete ? `<button class="btn btn-ghost btn-sm" data-delete-hist-order="${ord.id}">🗑️</button>` : ''}
             </div>
@@ -1202,6 +1203,17 @@ async function renderHistoricalOrdersView(projectId, date, userProfile) {
     });
     listContainer.querySelectorAll('[data-delete-hist-order]').forEach(btn => {
       btn.addEventListener('click', () => deleteOrder(btn.dataset.deleteHistOrder, userProfile));
+    });
+    listContainer.querySelectorAll('[data-restore-hist-order]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        try {
+          await ProjectsService.unarchiveOrder(btn.dataset.restoreHistOrder);
+          showToast('Order restored from history', 'success');
+          renderHistoricalOrdersView(projectId, date, userProfile);
+        } catch (err) {
+          showToast('Failed to restore order', 'error');
+        }
+      });
     });
 
   } catch (err) {

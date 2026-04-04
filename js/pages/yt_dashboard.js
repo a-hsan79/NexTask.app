@@ -1220,6 +1220,7 @@ async function renderHistoricalVideosView(channelId, date, userProfile) {
               </div>
             </div>
             <div style="display:flex;gap:4px">
+              ${canDelete ? `<button class="btn btn-ghost btn-sm" data-restore-hist-video="${vid.id}" title="Restore from History">↩️</button>` : ''}
               <button class="btn btn-ghost btn-sm" data-edit-hist-video="${vid.id}">✏️</button>
               ${canDelete ? `<button class="btn btn-ghost btn-sm" data-delete-hist-video="${vid.id}">🗑️</button>` : ''}
             </div>
@@ -1239,6 +1240,17 @@ async function renderHistoricalVideosView(channelId, date, userProfile) {
     });
     listContainer.querySelectorAll('[data-delete-hist-video]').forEach(btn => {
       btn.addEventListener('click', () => deleteVideo(btn.dataset.deleteHistVideo, userProfile));
+    });
+    listContainer.querySelectorAll('[data-restore-hist-video]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        try {
+          await ChannelsService.unarchiveVideo(btn.dataset.restoreHistVideo);
+          showToast('Video restored from history', 'success');
+          renderHistoricalVideosView(channelId, date, userProfile);
+        } catch (err) {
+          showToast('Failed to restore video', 'error');
+        }
+      });
     });
 
   } catch (err) {
