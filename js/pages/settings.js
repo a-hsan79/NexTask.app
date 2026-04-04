@@ -106,6 +106,37 @@ export async function renderSettingsPage(userProfile) {
           </div>
         </div>
 
+        <!-- AI Config Card -->
+        <div class="card" style="padding:var(--space-xl)">
+          <h3 style="margin-bottom:var(--space-lg);display:flex;align-items:center;gap:var(--space-sm)">🤖 AI Developer Config</h3>
+          <p class="subtitle" style="margin-bottom:var(--space-md)">Used for YouTube SEO Studio & Research Agents</p>
+          
+          <div class="form-group">
+            <label class="form-label">OpenRouter API Key</label>
+            <input type="password" class="form-input" id="settings-openrouter-key" placeholder="sk-or-v1-..." value="${localStorage.getItem('openrouter_api_key') || ''}" />
+            <p style="font-size:var(--font-xs);color:var(--text-muted);margin-top:var(--space-xs)">Your key is stored locally in this browser.</p>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Preferred AI Model</label>
+            <select class="form-select" id="settings-ai-model">
+              <optgroup label="Free Models">
+                <option value="openrouter/auto" ${localStorage.getItem('ai_model') === 'openrouter/auto' ? 'selected' : ''}>Auto (Free Selection)</option>
+                <option value="meta-llama/llama-3.1-405b-instruct" ${localStorage.getItem('ai_model') === 'meta-llama/llama-3.1-405b-instruct' ? 'selected' : ''}>Llama 3.1 405B (Free-tier)</option>
+              </optgroup>
+              <optgroup label="Premium Performance">
+                <option value="anthropic/claude-3.5-sonnet" ${localStorage.getItem('ai_model') === 'anthropic/claude-3.5-sonnet' ? 'selected' : ''}>Claude 3.5 Sonnet (Recommended)</option>
+                <option value="openai/gpt-4o-2024-08-06" ${localStorage.getItem('ai_model') === 'openai/gpt-4o-2024-08-06' ? 'selected' : ''}>GPT-4o (Omni)</option>
+                <option value="google/gemini-pro-1.5" ${localStorage.getItem('ai_model') === 'google/gemini-pro-1.5' ? 'selected' : ''}>Gemini Pro 1.5</option>
+              </optgroup>
+            </select>
+          </div>
+
+          <button class="btn btn-primary" id="btn-save-ai-config" style="width:100%">
+            <span>Save AI Configuration</span>
+          </button>
+        </div>
+
         <!-- App Info Card -->
         <div class="card" style="padding:var(--space-xl)">
           <h3 style="margin-bottom:var(--space-lg);display:flex;align-items:center;gap:var(--space-sm)">ℹ️ About NexTask</h3>
@@ -320,6 +351,15 @@ function initSettingsEvents(userProfile) {
 
       showToast('Data exported! 📊', 'success');
     } catch (err) { showToast('Export failed: ' + err.message, 'error'); }
+  });
+
+  // Save AI Config
+  document.getElementById('btn-save-ai-config')?.addEventListener('click', () => {
+    const key = document.getElementById('settings-openrouter-key').value.trim();
+    const model = document.getElementById('settings-ai-model').value;
+    localStorage.setItem('openrouter_api_key', key);
+    localStorage.setItem('ai_model', model);
+    showToast('AI Configuration saved! 🤖', 'success');
   });
 }
 

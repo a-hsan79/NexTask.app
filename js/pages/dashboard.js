@@ -198,6 +198,7 @@ async function loadDashboardData(userProfile) {
     let tasksQuery = supabase
       .from('tasks')
       .select('*, assigned_profile:profiles!tasks_assigned_to_fkey(full_name)')
+      .eq('is_archived', false)
       .order('created_at', { ascending: false })
       .limit(5);
 
@@ -209,8 +210,9 @@ async function loadDashboardData(userProfile) {
 
     // Fetch orders
     let ordersQuery = supabase
-      .from('orders')
-      .select('*, assigned_profile:profiles!orders_assigned_to_fkey(full_name)')
+      .from('freelance_orders')
+      .select('*, assigned_profile:profiles!freelance_orders_assigned_to_fkey(full_name)')
+      .eq('is_archived', false)
       .order('created_at', { ascending: false })
       .limit(5);
 

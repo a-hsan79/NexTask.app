@@ -260,7 +260,8 @@ function renderTasksList(tasks, userProfile) {
             </div>
           </div>
           <div class="item-card-actions">
-            ${canDelete ? `<button class="btn btn-ghost btn-sm" data-archive-task="${task.id}" title="Move to History">📜</button>` : ''}
+            ${!task.is_archived && canDelete ? `<button class="btn btn-ghost btn-sm" data-archive-task="${task.id}" title="Move to History">📜</button>` : ''}
+            ${task.is_archived && canDelete ? `<button class="btn btn-ghost btn-sm" data-restore-task="${task.id}" title="Restore from History">↩️</button>` : ''}
             ${canEditItem ? `<button class="btn btn-ghost btn-sm" data-edit-task="${task.id}">✏️</button>` : ''}
             ${canDelete ? `<button class="btn btn-ghost btn-sm" data-delete-task="${task.id}">🗑️</button>` : ''}
           </div>
@@ -280,6 +281,32 @@ function renderTasksList(tasks, userProfile) {
   });
   container.querySelectorAll('[data-delete-task]').forEach(btn => {
     btn.addEventListener('click', () => deleteTask(btn.dataset.deleteTask, userProfile));
+  });
+
+  // Archive listener
+  container.querySelectorAll('[data-archive-task]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      try {
+        await TasksService.archiveTask(btn.dataset.archiveTask);
+        showToast('Task moved to history', 'success');
+        const status = document.querySelector('[data-status].active')?.dataset.status || 'all';
+        const search = document.getElementById('task-search')?.value || '';
+        await loadTasksData(userProfile, status, search);
+      } catch (err) { showToast('Failed to archive task', 'error'); }
+    });
+  });
+
+  // Restore listener
+  container.querySelectorAll('[data-restore-task]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      try {
+        await TasksService.unarchiveTask(btn.dataset.restoreTask);
+        showToast('Task restored', 'success');
+        const status = document.querySelector('[data-status].active')?.dataset.status || 'all';
+        const search = document.getElementById('task-search')?.value || '';
+        await loadTasksData(userProfile, status, search);
+      } catch (err) { showToast('Failed to restore task', 'error'); }
+    });
   });
 
   // Multi-select bindings
@@ -452,6 +479,7 @@ function initTaskSelectionSystem(container, userProfile) {
     <span class="bulk-count" id="bulk-count">0 selected</span>
     <button class="btn btn-secondary btn-sm" id="bulk-select-all">\u2611 Select All</button>
     <button class="btn btn-secondary btn-sm" id="bulk-deselect">\u2716 Clear</button>
+    <button class="btn btn-primary btn-sm" id="bulk-archive" style="background:var(--primary);border-color:var(--primary)">📜 Move to History</button>
     <button class="btn btn-primary btn-sm" id="bulk-delete" style="background:var(--danger,#e74c3c);border-color:var(--danger,#e74c3c)">\ud83d\uddd1\ufe0f Delete Selected</button>
   `;
   document.body.appendChild(bar);
@@ -510,5 +538,21 @@ function initTaskSelectionSystem(container, userProfile) {
       console.error('Bulk delete error:', err);
       showToast('Failed to delete some items', 'error');
     }
+  });
+
+  // Bulk Archive
+  document.getElementById('bulk-archive')?.addEventListener('click', async () => {
+    if (!selectedIds.size) return;
+    const confirmed = await showConfirmModal('Move to History', `Move ${selectedIds.size} task(s) to history?`);
+    if (!confirmed) return;
+    try {
+      for (const id of [...selectedIds]) await TasksService.archiveTask(id);
+      showToast(`${selectedIds.size} task(s) moved to history`, 'success');
+      selectedIds.clear();
+      bar.classList.remove('visible');
+      const activeStatus = document.querySelector('[data-status].active')?.dataset.status || 'all';
+      const search = document.getElementById('task-search')?.value || '';
+      await loadTasksData(userProfile, activeStatus, search);
+    } catch (err) { showToast('Failed to archive some items', 'error'); }
   });
 }

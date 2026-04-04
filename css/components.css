@@ -538,3 +538,92 @@
 .avatar-sm { width: 28px; height: 28px; font-size: var(--font-xs); }
 .avatar-lg { width: 48px; height: 48px; font-size: var(--font-lg); }
 .avatar-xl { width: 64px; height: 64px; font-size: var(--font-xl); }
+
+/* ===========================
+   AI SEO Studio Styles
+   =========================== */
+
+.workflow-stepper .step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xs);
+  opacity: 0.4;
+  transition: all var(--transition-normal);
+}
+
+.workflow-stepper .step.active {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.workflow-stepper .step-num {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--bg-input);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: var(--font-weight-bold);
+  border: 2px solid var(--border-light);
+}
+
+.workflow-stepper .step.active .step-num {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary-light);
+  box-shadow: 0 0 15px var(--primary-glow);
+}
+
+.loader-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-2xl);
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.ai-text-content {
+  line-height: 1.7;
+  color: var(--text-primary);
+}
+
+.results-grid {
+  animation: slideUp 0.5s var(--apple-spring);
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.seo-hero {
+  background: linear-gradient(135deg, rgba(108, 92, 231, 0.05) 0%, rgba(0, 184, 148, 0.05) 100%);
+  border: 1px solid var(--primary-glow);
+}
+
+.btn-ai-studio {
+  background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 15px rgba(108, 92, 231, 0.3);
+  transition: all var(--transition-normal);
+}
+
+.btn-ai-studio:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 8px 25px rgba(108, 92, 231, 0.5);
+  background: linear-gradient(135deg, #a29bfe, #6c5ce7);
+}
+
+.ai-text-content {
+  animation: fadeIn 0.8s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

@@ -13,6 +13,7 @@ import { renderTeamPage } from './pages/team.js';
 import { renderTasksPage } from './pages/tasks.js';
 import { renderExpensesPage } from './pages/expenses.js';
 import { renderSettingsPage } from './pages/settings.js';
+import { renderAISEOPage } from './pages/ai_seo.js';
 
 // App State
 let currentUser = null;
@@ -337,6 +338,9 @@ async function navigateTo(page, skipPushState = false) {
           break;
         case 'settings':
           await renderSettingsPage(currentProfile);
+          break;
+        case 'ai_seo':
+          await renderAISEOPage(currentProfile);
           break;
         default:
           renderComingSoon('Page Not Found', '🔍', 'This page doesn\'t exist.');

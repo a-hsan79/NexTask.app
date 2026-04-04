@@ -139,11 +139,10 @@ export const ProjectsService = {
 
   // Get all order stats across all projects (Active only)
   async getAllOrderStats() {
-    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { data, error } = await supabase
       .from('freelance_orders')
       .select('status, amount, assigned_to')
-      .gte('created_at', dayAgo);
+      .eq('is_archived', false);
 
     if (error) throw error;
     const stats = { 

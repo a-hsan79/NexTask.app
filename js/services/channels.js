@@ -62,12 +62,11 @@ export const ChannelsService = {
       .select('*, assigned_profile:profiles!yt_videos_assigned_to_fkey(full_name, role), creator:profiles!yt_videos_created_by_fkey(full_name), yt_channels!inner(name, section)')
       .order('created_at', { ascending: false });
 
-    // 24-Hour Archival Logic
-    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    // Manual Archival Logic (uses is_archived flag)
     if (includeArchived) {
-      query = query.lt('created_at', dayAgo);
+      query = query.eq('is_archived', true);
     } else {
-      query = query.gte('created_at', dayAgo);
+      query = query.eq('is_archived', false);
     }
 
     if (channelId) query = query.eq('channel_id', channelId);
@@ -109,14 +108,23 @@ export const ChannelsService = {
     if (error) throw error;
   },
 
+  async archiveVideo(id) {
+    const { error } = await supabase.from('yt_videos').update({ is_archived: true }).eq('id', id);
+    if (error) throw error;
+  },
+
+  async unarchiveVideo(id) {
+    const { error } = await supabase.from('yt_videos').update({ is_archived: false }).eq('id', id);
+    if (error) throw error;
+  },
+
   // Get video count and completion status per channel (Active only)
   async getChannelVideoCount(channelId) {
-    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { data, error } = await supabase
       .from('yt_videos')
       .select('status')
       .eq('channel_id', channelId)
-      .gte('created_at', dayAgo);
+      .eq('is_archived', false);
     
     if (error) return { total: 0, done: 0, uploaded: 0 };
     
@@ -130,13 +138,12 @@ export const ChannelsService = {
   // BULK methods to prevent gotrue-js lock contention on massive UI loads
   async getBulkChannelVideoCounts(channelIds) {
     if (!channelIds || !channelIds.length) return {};
-    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     
     const { data, error } = await supabase
       .from('yt_videos')
       .select('channel_id, status')
       .in('channel_id', channelIds)
-      .gte('created_at', dayAgo);
+      .eq('is_archived', false);
       
     if (error) throw error;
     
@@ -154,12 +161,11 @@ export const ChannelsService = {
 
   // Get all video stats across all channels for a specific section (Active only)
   async getAllVideoStats(section = 'automation') {
-    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { data, error } = await supabase
       .from('yt_videos')
       .select('status, assigned_to, yt_channels!inner(section)')
       .eq('yt_channels.section', section)
-      .gte('created_at', dayAgo);
+      .eq('is_archived', false);
 
     if (error) throw error;
     const stats = { 
@@ -197,11 +203,10 @@ export const ChannelsService = {
   // === ARCHIVE LOGIC ===
 
   async getArchivedVideoDates(channelId) {
-    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     let query = supabase
       .from('yt_videos')
       .select('created_at')
-      .lt('created_at', dayAgo)
+      .eq('is_archived', true)
       .order('created_at', { ascending: false });
 
     if (channelId) query = query.eq('channel_id', channelId);
@@ -216,13 +221,12 @@ export const ChannelsService = {
 
   async getBulkArchivedVideoDates(channelIds) {
     if (!channelIds || !channelIds.length) return {};
-    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     
     const { data, error } = await supabase
       .from('yt_videos')
       .select('channel_id, created_at')
       .in('channel_id', channelIds)
-      .lt('created_at', dayAgo);
+      .eq('is_archived', true);
       
     if (error) throw error;
     

@@ -4,6 +4,7 @@
 
 import { ChannelsService } from '../services/channels.js';
 import { TeamService } from '../services/team.js';
+import { renderAISEOPage } from './ai_seo.js';
 import { hasPermission } from '../utils/permissions.js';
 import { getInitials, getAvatarColor, showToast, sanitize, timeAgo, debounce, showConfirmModal } from '../utils/helpers.js';
 import { addSubscription, clearSubscriptions } from '../app.js';
@@ -537,6 +538,7 @@ async function openChannelVideos(channelId, userProfile, initialStatus = 'all') 
           <p class="subtitle">${channel.url ? `<a href="${sanitize(channel.url)}" target="_blank" style="color:var(--primary)">View Channel ↗</a>` : 'YouTube Channel'}</p>
         </div>
         <div style="display:flex;gap:12px;align-items:center">
+          <button class="btn btn-ai-studio" id="btn-yt-ai-seo">✨ AI SEO Studio</button>
           <button class="btn btn-ghost" id="btn-yt-history">📜 Daily History</button>
           ${canCreate ? `<button class="btn btn-primary" id="btn-new-video">+ Add Video</button>` : ''}
         </div>
@@ -743,6 +745,10 @@ function initVideoEvents(userProfile) {
 
   document.getElementById('btn-yt-history')?.addEventListener('click', () => {
     openDailyHistory(currentChannel.id, userProfile);
+  });
+
+  document.getElementById('btn-yt-ai-seo')?.addEventListener('click', () => {
+    window.dispatchEvent(new CustomEvent('navigate', { detail: { page: 'ai_seo' } }));
   });
 }
 
@@ -1073,7 +1079,7 @@ async function openDailyHistory(channelId, userProfile) {
       <div class="page-header">
         <div>
           <h1>📜 Daily History</h1>
-          <p class="subtitle">Videos archived for ${sanitize(currentChannel.name)} (Older than 24h)</p>
+          <p class="subtitle">Videos manually moved to history for ${sanitize(currentChannel.name)}</p>
         </div>
       </div>
 
@@ -1277,6 +1283,7 @@ function initVideoSelectionSystem(container, userProfile) {
     <span class="bulk-count" id="bulk-count">0 selected</span>
     <button class="btn btn-secondary btn-sm" id="bulk-select-all">\u2611 Select All</button>
     <button class="btn btn-secondary btn-sm" id="bulk-deselect">\u2716 Clear</button>
+    <button class="btn btn-primary btn-sm" id="bulk-archive" style="background:var(--primary);border-color:var(--primary)">📜 Move to History</button>
     <button class="btn btn-primary btn-sm" id="bulk-delete" style="background:var(--danger,#e74c3c);border-color:var(--danger,#e74c3c)">\ud83d\uddd1\ufe0f Delete Selected</button>
   `;
   document.body.appendChild(bar);
@@ -1335,5 +1342,21 @@ function initVideoSelectionSystem(container, userProfile) {
       console.error('Bulk delete error:', err);
       showToast('Failed to delete some items', 'error');
     }
+  });
+
+  // Bulk Archive (videos)
+  document.getElementById('bulk-archive')?.addEventListener('click', async () => {
+    if (!selectedIds.size) return;
+    const confirmed = await showConfirmModal('Move to History', `Move ${selectedIds.size} video(s) to history?`);
+    if (!confirmed) return;
+    try {
+      for (const id of [...selectedIds]) await ChannelsService.archiveVideo(id);
+      showToast(`${selectedIds.size} video(s) moved to history`, 'success');
+      selectedIds.clear();
+      bar.classList.remove('visible');
+      const activeStatus = document.querySelector('[data-vstatus].active')?.dataset.vstatus || 'all';
+      const search = document.getElementById('video-search')?.value || '';
+      await loadVideosData(userProfile, activeStatus, search);
+    } catch (err) { showToast('Failed to archive some videos', 'error'); }
   });
 }
