@@ -66,12 +66,11 @@ export const ProjectsService = {
       .select('*, assigned_profile:profiles!freelance_orders_assigned_to_fkey(full_name, role), creator:profiles!freelance_orders_created_by_fkey(full_name), freelance_projects!inner(name, platform)')
       .order('created_at', { ascending: false });
 
-    // 24-Hour Archival Logic
-    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    // Manual Archival Logic
     if (includeArchived) {
-      query = query.lt('created_at', dayAgo);
+      query = query.eq('is_archived', true);
     } else {
-      query = query.gte('created_at', dayAgo);
+      query = query.eq('is_archived', false);
     }
 
     if (projectId) query = query.eq('project_id', projectId);
@@ -111,14 +110,23 @@ export const ProjectsService = {
     if (error) throw error;
   },
 
+  async archiveOrder(id) {
+    const { error } = await supabase.from('freelance_orders').update({ is_archived: true }).eq('id', id);
+    if (error) throw error;
+  },
+
+  async unarchiveOrder(id) {
+    const { error } = await supabase.from('freelance_orders').update({ is_archived: false }).eq('id', id);
+    if (error) throw error;
+  },
+
   // Get order count and completion status per project (Active only)
   async getProjectOrderCount(projectId) {
-    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { data, error } = await supabase
       .from('freelance_orders')
       .select('status')
       .eq('project_id', projectId)
-      .gte('created_at', dayAgo);
+      .eq('is_archived', false);
     
     if (error) return { total: 0, done: 0 };
     
@@ -166,11 +174,10 @@ export const ProjectsService = {
   // === ARCHIVE LOGIC ===
 
   async getArchivedOrderDates(projectId) {
-    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     let query = supabase
       .from('freelance_orders')
       .select('created_at')
-      .lt('created_at', dayAgo)
+      .eq('is_archived', true)
       .order('created_at', { ascending: false });
 
     if (projectId) query = query.eq('project_id', projectId);
@@ -186,13 +193,12 @@ export const ProjectsService = {
   // BULK methods for performance
   async getBulkProjectOrderCounts(projectIds) {
     if (!projectIds || !projectIds.length) return {};
-    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     
     const { data, error } = await supabase
       .from('freelance_orders')
       .select('project_id, status')
       .in('project_id', projectIds)
-      .gte('created_at', dayAgo);
+      .eq('is_archived', false);
       
     if (error) throw error;
     
@@ -209,13 +215,12 @@ export const ProjectsService = {
 
   async getBulkArchivedOrderDates(projectIds) {
     if (!projectIds || !projectIds.length) return {};
-    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     
     const { data, error } = await supabase
       .from('freelance_orders')
       .select('project_id, created_at')
       .in('project_id', projectIds)
-      .lt('created_at', dayAgo);
+      .eq('is_archived', true);
       
     if (error) throw error;
     

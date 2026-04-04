@@ -87,6 +87,7 @@ export async function renderTasksPage(userProfile) {
           <button class="filter-chip" data-status="in_progress">🔄 Active</button>
           <button class="filter-chip" data-status="completed">✅ Completed</button>
           <button class="filter-chip" data-status="done">✅ Done</button>
+          <button class="filter-chip" data-status="archived">📜 Archived</button>
         </div>
       </div>
 
@@ -259,6 +260,7 @@ function renderTasksList(tasks, userProfile) {
             </div>
           </div>
           <div class="item-card-actions">
+            ${canDelete ? `<button class="btn btn-ghost btn-sm" data-archive-task="${task.id}" title="Move to History">📜</button>` : ''}
             ${canEditItem ? `<button class="btn btn-ghost btn-sm" data-edit-task="${task.id}">✏️</button>` : ''}
             ${canDelete ? `<button class="btn btn-ghost btn-sm" data-delete-task="${task.id}">🗑️</button>` : ''}
           </div>

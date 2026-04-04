@@ -652,6 +652,7 @@ function renderOrdersList(orders, userProfile) {
             </div>
           </div>
           <div style="display:flex;gap:4px">
+            ${canDelete ? `<button class="btn btn-ghost btn-sm" data-archive-order="${ord.id}" title="Move to History">📜</button>` : ''}
             ${canEditItem ? `<button class="btn btn-ghost btn-sm" data-edit-order="${ord.id}">✏️</button>` : ''}
             ${canDelete ? `<button class="btn btn-ghost btn-sm" data-delete-order="${ord.id}">🗑️</button>` : ''}
           </div>
@@ -670,6 +671,19 @@ function renderOrdersList(orders, userProfile) {
   });
   container.querySelectorAll('[data-delete-order]').forEach(btn => {
     btn.addEventListener('click', () => deleteOrder(btn.dataset.deleteOrder, userProfile));
+  });
+  container.querySelectorAll('[data-archive-order]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      try {
+        await ProjectsService.archiveOrder(btn.dataset.archiveOrder);
+        showToast('Moved to history', 'success');
+        const activeStatus = document.querySelector('[data-ostatus].active')?.dataset.ostatus || 'all';
+        const search = document.getElementById('order-search')?.value || '';
+        await loadOrdersData(userProfile, activeStatus, search);
+      } catch (err) {
+        showToast('Failed to archive', 'error');
+      }
+    });
   });
 
   // Multi-select bindings
@@ -1216,6 +1230,7 @@ function initSelectionSystem(container, type, userProfile) {
     <span class="bulk-count" id="bulk-count">0 selected</span>
     <button class="btn btn-secondary btn-sm" id="bulk-select-all">\u2611 Select All</button>
     <button class="btn btn-secondary btn-sm" id="bulk-deselect">\u2716 Clear</button>
+    <button class="btn btn-primary btn-sm" id="bulk-archive" style="background:var(--primary);border-color:var(--primary)">📜 Move to History</button>
     <button class="btn btn-primary btn-sm" id="bulk-delete" style="background:var(--danger,#e74c3c);border-color:var(--danger,#e74c3c)">\ud83d\uddd1\ufe0f Delete Selected</button>
   `;
   document.body.appendChild(bar);
@@ -1286,6 +1301,30 @@ function initSelectionSystem(container, type, userProfile) {
     } catch (err) {
       console.error('Bulk delete error:', err);
       showToast('Failed to delete some items', 'error');
+    }
+  });
+
+  // Bulk Archive
+  document.getElementById('bulk-archive')?.addEventListener('click', async () => {
+    if (!selectedIds.size) return;
+    const confirmed = await showConfirmModal('Move to History', `Move ${selectedIds.size} selected ${type}(s) to history folder?`);
+    if (!confirmed) return;
+    
+    try {
+      const ids = [...selectedIds];
+      for (const id of ids) {
+        await ProjectsService.archiveOrder(id);
+      }
+      showToast(`${ids.length} order(s) moved to history`, 'success');
+      selectedIds.clear();
+      bar.classList.remove('visible');
+      
+      const activeStatus = document.querySelector('[data-ostatus].active')?.dataset.ostatus || 'all';
+      const search = document.getElementById('order-search')?.value || '';
+      await loadOrdersData(userProfile, activeStatus, search);
+    } catch (err) {
+      console.error('Bulk archive error:', err);
+      showToast('Failed to move some items to history', 'error');
     }
   });
 }

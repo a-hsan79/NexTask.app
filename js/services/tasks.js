@@ -14,7 +14,12 @@ export const TasksService = {
       .order('created_at', { ascending: false })
       .limit(limit);
 
-    if (status && status !== 'all') query = query.eq('status', status);
+    if (status === 'archived') {
+      query = query.eq('is_archived', true);
+    } else {
+      query = query.eq('is_archived', false);
+      if (status && status !== 'all') query = query.eq('status', status);
+    }
     if (priority && priority !== 'all') query = query.eq('priority', priority);
     if (category && category !== 'all') query = query.eq('category', category);
     if (assignedTo) query = query.eq('assigned_to', assignedTo);
@@ -68,9 +73,27 @@ export const TasksService = {
     if (error) throw error;
   },
 
+  // Archive task
+  async archiveTask(id) {
+    const { error } = await supabase
+      .from('tasks')
+      .update({ is_archived: true })
+      .eq('id', id);
+    if (error) throw error;
+  },
+
+  // Unarchive task
+  async unarchiveTask(id) {
+    const { error } = await supabase
+      .from('tasks')
+      .update({ is_archived: false })
+      .eq('id', id);
+    if (error) throw error;
+  },
+
   // Get task counts by status
   async getTaskStats(category) {
-    let query = supabase.from('tasks').select('status, assigned_to');
+    let query = supabase.from('tasks').select('status, assigned_to').eq('is_archived', false);
     if (category) query = query.eq('category', category);
 
     const { data, error } = await query;
