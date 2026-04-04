@@ -94,12 +94,16 @@ function initSEOEvents(userProfile) {
 function renderSEOResults(research, optimization) {
   const container = document.getElementById('seo-results');
   
-  // Simple parsing same as React version
+  // Parse Titles
   const titles = optimization.match(/\[TITLE\](.*?)\[\/TITLE\]/g)?.map(t => t.replace(/\[\/?TITLE\]/g, '').trim()) || [];
-  const description = optimization.split('[DESC]')[1]?.split('[/DESC]')[0] || optimization;
+  
+  // Parse Description (Remove TAGS for the description box)
+  let fullDesc = optimization.split('[DESC]')[1]?.split('[/DESC]')[0] || optimization;
+  const tags = fullDesc.split('[TAGS]')[1]?.split('[/TAGS]')[0] || "";
+  const cleanDesc = fullDesc.replace(/\[TAGS\].*?\[\/TAGS\]/s, '').trim();
 
   container.innerHTML = `
-    <div class="results-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-lg); animation: slideUp 0.4s easeOut">
+    <div class="results-grid" style="display:grid; grid-template-columns:1fr 1.2fr; gap:var(--space-lg); animation: slideUp 0.4s easeOut">
       <div class="card" style="padding:var(--space-lg)">
         <h3 style="margin-bottom:var(--space-md)">🔍 Strategic Angles</h3>
         <div class="ai-text-content" style="white-space:pre-wrap; font-size:var(--font-sm); opacity:0.9">
@@ -108,6 +112,7 @@ function renderSEOResults(research, optimization) {
       </div>
       
       <div style="display:flex; flex-direction:column; gap:var(--space-lg)">
+        <!-- Titles Section -->
         <div class="card" style="padding:var(--space-lg)">
           <h3 style="margin-bottom:var(--space-md)">🔥 High-CTR Titles</h3>
           <div style="display:flex; flex-direction:column; gap:var(--space-sm)">
@@ -120,13 +125,25 @@ function renderSEOResults(research, optimization) {
           </div>
         </div>
         
+        <!-- Description Section -->
         <div class="card" style="padding:var(--space-lg)">
-          <h3 style="margin-bottom:var(--space-md)">📝 Description Hook</h3>
-          <div style="background:var(--bg-secondary); padding:var(--space-md); border-radius:var(--radius-md); font-family:monospace; font-size:var(--font-xs); white-space:pre-wrap">
-            ${sanitize(description)}
+          <h3 style="margin-bottom:var(--space-md)">📝 Ready Description Template</h3>
+          <div style="background:var(--bg-secondary); padding:var(--space-md); border-radius:var(--radius-md); font-family:monospace; font-size:var(--font-xs); white-space:pre-wrap; max-height:250px; overflow-y:auto">
+            ${sanitize(cleanDesc)}
           </div>
-          <button class="btn btn-secondary btn-sm btn-copy" data-copy="${sanitize(description)}" style="width:100%; margin-top:var(--space-md)">Copy Template</button>
+          <button class="btn btn-secondary btn-sm btn-copy" data-copy="${sanitize(cleanDesc)}" style="width:100%; margin-top:var(--space-md)">Copy Full Description</button>
         </div>
+
+        <!-- Tags Section -->
+        ${tags ? `
+        <div class="card" style="padding:var(--space-lg)">
+          <h3 style="margin-bottom:var(--space-md)">🏷️ High-CTR Tags</h3>
+          <div style="background:var(--bg-secondary); padding:var(--space-md); border-radius:var(--radius-md); font-family:monospace; font-size:var(--font-xs); color:var(--primary-light)">
+            ${sanitize(tags)}
+          </div>
+          <button class="btn btn-secondary btn-sm btn-copy" data-copy="${sanitize(tags)}" style="width:100%; margin-top:var(--space-md)">Copy All Tags</button>
+        </div>
+        ` : ''}
       </div>
     </div>
   `;

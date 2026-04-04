@@ -119,17 +119,13 @@ export async function renderSettingsPage(userProfile) {
 
           <div class="form-group">
             <label class="form-label">Preferred AI Model</label>
-            <select class="form-select" id="settings-ai-model">
-              <optgroup label="Free Models">
-                <option value="openrouter/auto" ${localStorage.getItem('ai_model') === 'openrouter/auto' ? 'selected' : ''}>Auto (Free Selection)</option>
-                <option value="meta-llama/llama-3.1-405b-instruct" ${localStorage.getItem('ai_model') === 'meta-llama/llama-3.1-405b-instruct' ? 'selected' : ''}>Llama 3.1 405B (Free-tier)</option>
-              </optgroup>
-              <optgroup label="Premium Performance">
-                <option value="anthropic/claude-3.5-sonnet" ${localStorage.getItem('ai_model') === 'anthropic/claude-3.5-sonnet' ? 'selected' : ''}>Claude 3.5 Sonnet (Recommended)</option>
-                <option value="openai/gpt-4o-2024-08-06" ${localStorage.getItem('ai_model') === 'openai/gpt-4o-2024-08-06' ? 'selected' : ''}>GPT-4o (Omni)</option>
-                <option value="google/gemini-pro-1.5" ${localStorage.getItem('ai_model') === 'google/gemini-pro-1.5' ? 'selected' : ''}>Gemini Pro 1.5</option>
-              </optgroup>
             </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Custom Agent Persona/Instructions</label>
+            <textarea class="form-textarea" id="settings-ai-instructions" placeholder="e.g. Write in a catchy, expert tone. Focus on military technology and geopolitics." style="min-height:100px">${localStorage.getItem('ai_custom_instructions') || ''}</textarea>
+            <p style="font-size:var(--font-xs);color:var(--text-muted);margin-top:var(--space-xs)">These instructions will be followed for every AI research and optimization session.</p>
           </div>
 
           <button class="btn btn-primary" id="btn-save-ai-config" style="width:100%">
@@ -357,8 +353,11 @@ function initSettingsEvents(userProfile) {
   document.getElementById('btn-save-ai-config')?.addEventListener('click', () => {
     const key = document.getElementById('settings-openrouter-key').value.trim();
     const model = document.getElementById('settings-ai-model').value;
+    const instructions = document.getElementById('settings-ai-instructions').value.trim();
+    
     localStorage.setItem('openrouter_api_key', key);
     localStorage.setItem('ai_model', model);
+    localStorage.setItem('ai_custom_instructions', instructions);
     showToast('AI Configuration saved! 🤖', 'success');
   });
 }
