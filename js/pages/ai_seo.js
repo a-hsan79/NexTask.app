@@ -16,9 +16,14 @@ export async function renderAISEOPage(userProfile, initialNiche = '') {
 
       <div class="card seo-hero" style="padding:var(--space-xl); margin-bottom:var(--space-lg); text-align:center">
         <h2 style="margin-bottom:var(--space-md)">What's your next viral video topic?</h2>
-        <div style="display:flex; gap:var(--space-md); max-width:600px; margin:0 auto">
-          <input type="text" id="seo-niche-input" class="form-input" placeholder="e.g. US Aircraft Carriers in Middle East conflict" value="${sanitize(initialNiche)}" />
-          <button class="btn btn-primary" id="btn-run-seo">✨ Run Agent</button>
+        <div style="display:flex; flex-direction:column; gap:var(--space-md); max-width:600px; margin:0 auto">
+          <div style="display:flex; gap:var(--space-md); width:100%; position:relative">
+            <input type="text" id="seo-niche-input" class="form-input" placeholder="e.g. US Aircraft Carriers in Middle East conflict" value="${sanitize(initialNiche)}" style="padding-left: 45px" />
+            <button class="btn-icon" id="btn-attach-file" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); opacity:0.7; font-size:1.2rem" title="Attach image/file">📎</button>
+            <input type="file" id="seo-file-input" class="hidden" accept="image/*,application/pdf,text/plain" />
+            <button class="btn btn-primary" id="btn-run-seo">✨ Run Agent</button>
+          </div>
+          <div id="attachment-preview-container" class="hidden" style="margin-top:var(--space-sm)"></div>
         </div>
       </div>
 
@@ -50,14 +55,61 @@ export async function renderAISEOPage(userProfile, initialNiche = '') {
 function initSEOEvents(userProfile) {
   const btnRun = document.getElementById('btn-run-seo');
   const inputNiche = document.getElementById('seo-niche-input');
+  const btnAttach = document.getElementById('btn-attach-file');
+  const inputFile = document.getElementById('seo-file-input');
+  const previewContainer = document.getElementById('attachment-preview-container');
+
+  let currentAttachments = [];
 
   document.getElementById('btn-back-yt-dash')?.addEventListener('click', () => {
     window.dispatchEvent(new CustomEvent('navigate', { detail: { page: 'yt_dashboard' } }));
   });
-  
+
+  btnAttach?.addEventListener('click', () => inputFile.click());
+
+  inputFile?.addEventListener('change', async (e) => {
+    const files = Array.from(e.target.files);
+    for (const file of files) {
+      if (file.size > 5 * 1024 * 1024) {
+        showToast('File too large (max 5MB)', 'error');
+        continue;
+      }
+      try {
+        const base64 = await fileToBase64(file);
+        currentAttachments.push(base64);
+        renderAttachmentPreview(file, base64);
+      } catch (err) {
+        showToast('Error reading file', 'error');
+      }
+    }
+    inputFile.value = ''; // Reset for next selection
+  });
+
+  function renderAttachmentPreview(file, base64) {
+    previewContainer.classList.remove('hidden');
+    const isImage = file.type.startsWith('image/');
+    const div = document.createElement('div');
+    div.className = 'attachment-card';
+    div.style = 'display:inline-flex; align-items:center; gap:var(--space-sm); background:var(--bg-secondary); padding:var(--space-xs) var(--space-sm); border-radius:var(--radius-md); border:1px solid var(--primary-glow); margin:5px';
+    div.innerHTML = `
+      ${isImage ? `<img src="${base64}" style="width:24px; height:24px; border-radius:4px; object-fit:cover" />` : '📄'}
+      <span style="font-size:var(--font-xs); max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${sanitize(file.name)}</span>
+      <span class="remove-att" style="cursor:pointer; font-weight:bold; color:var(--danger)">×</span>
+    `;
+    div.querySelector('.remove-att').onclick = () => {
+      currentAttachments = currentAttachments.filter(a => a !== base64);
+      div.remove();
+      if (currentAttachments.length === 0) previewContainer.classList.add('hidden');
+    };
+    previewContainer.appendChild(div);
+  }
+
   btnRun?.addEventListener('click', async () => {
     const niche = inputNiche.value.trim();
-    if (!niche) { showToast('Please enter a niche topic', 'warning'); return; }
+    if (!niche && currentAttachments.length === 0) { 
+      showToast('Please enter a topic or attach a file', 'warning'); 
+      return; 
+    }
     
     const workflow = document.getElementById('seo-workflow-container');
     const results = document.getElementById('seo-results');
@@ -71,7 +123,7 @@ function initSEOEvents(userProfile) {
     
     try {
       // Step 1: Research
-      const researchData = await AIService.runResearchWorkflow(niche);
+      const researchData = await AIService.runResearchWorkflow(niche, currentAttachments);
       step1.classList.remove('active');
       step1.innerHTML = `<span class="step-num">✅</span> <span>Deep Research</span>`;
       
@@ -79,7 +131,7 @@ function initSEOEvents(userProfile) {
       step2.classList.add('active');
       results.innerHTML += `<div class="loader-container"><div class="spinner"></div><p>Generating High-CTR Titles & Description...</p></div>`;
       
-      const optResult = await AIService.runOptimizationWorkflow(researchData);
+      const optResult = await AIService.runOptimizationWorkflow(researchData, currentAttachments);
       step2.classList.remove('active');
       step2.innerHTML = `<span class="step-num">✅</span> <span>CTR Optimization</span>`;
       
@@ -155,5 +207,14 @@ function renderSEOResults(research, optimization) {
       btn.textContent = '✅';
       setTimeout(() => btn.textContent = btn.classList.contains('btn-ghost') ? '📋' : 'Copy Template', 2000);
     });
+  });
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = error => reject(error);
   });
 }
