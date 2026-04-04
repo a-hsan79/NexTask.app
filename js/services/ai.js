@@ -63,9 +63,52 @@ export const AIService = {
     }
   },
 
+  async callChat(userMessage, history = [], attachments = []) {
+    const apiKey = this.getApiKey();
+    const model = this.getModel();
+    const customPersona = localStorage.getItem('ai_custom_instructions') || '';
+    
+    if (!apiKey) throw new Error("Please set your OpenRouter API Key in Settings.");
+
+    // Format messages for Chat History
+    const apiMessages = [
+      { role: "system", content: `You are a helpful NexTube AI Assistant. ${customPersona ? `PERSONA: ${customPersona}` : ''}` },
+      ...history,
+      { role: "user", content: attachments.length > 0 ? [
+          { type: "text", text: userMessage },
+          ...attachments.map(att => ({ type: "image_url", image_url: { url: att } }))
+        ] : userMessage 
+      }
+    ];
+
+    try {
+      const response = await fetch(OPENROUTER_URL, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": window.location.origin,
+          "X-Title": "NexTask AI Bot",
+        },
+        body: JSON.stringify({ model, messages: apiMessages })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || "Chat failed");
+      }
+      const data = await response.json();
+      return data.choices[0].message.content;
+    } catch (err) { throw err; }
+  },
+
   async runResearchWorkflow(niche, attachments = []) {
     const customPersona = localStorage.getItem('ai_custom_instructions') || '';
-    const researchPrompt = `Act as a YouTube SEO Expert. ${customPersona ? `PERSONA: ${customPersona}` : ''}\n\nFor the niche '${niche}', identify 3 'Low Competition' angles that viewers are searching for but big channels are ignoring. Focus on specific technical details or recent news gaps. Return as a clear list.`;
+    const researchPrompt = `Act as a Senior YouTube Strategist (2025 Specialist). ${customPersona ? `PERSONA: ${customPersona}` : ''}\n\nFor the niche '${niche}', perform deep research focusing on:
+1. Latest 2024-2025 algorithm-preferred topics (High Audience Retention/Watch Time hooks).
+2. Underserved search-intent gaps that big channels are missing.
+3. Content that satisfies current YouTube discovery signals.
+Identify 3 'Low Competition' but 'High Opportunity' angles. Return as a clear list.`;
     return await this.callModel(researchPrompt, attachments);
   },
 
