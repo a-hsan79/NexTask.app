@@ -147,17 +147,22 @@ function initSEOEvents(userProfile) {
   });
 }
 
-function renderTitlesSelection(titleResult, researchData, attachments) {
+  function renderTitlesSelection(titleResult, researchData, attachments) {
     const results = document.getElementById('seo-results');
-    const titles = titleResult.match(/\[TITLE\](.*?)\[\/TITLE\]/g)?.map(t => t.replace(/\[\/?TITLE\]/g, '').trim()) || [];
+    // Using [\s\S] to match across newlines
+    let titles = titleResult.match(/\[TITLE\]([\s\S]*?)\[\/TITLE\]/g)?.map(t => t.replace(/\[\/?TITLE\]/g, '').trim()) || [];
+    
+    // Fallback if AI didn't use tags properly
+    if (titles.length === 0) {
+      titles = titleResult.split('\n').filter(l => l.length > 20 && l.length < 150).slice(0, 5);
+    }
     
     results.innerHTML = `
       <div class="fade-in">
         <h3 style="text-align:center; margin-bottom:var(--space-lg)">Step 2: Choose your favorite title 🎯</h3>
-        <div style="display:grid; grid-template-columns:1fr 1.2fr; gap:var(--space-lg)">
-          <div class="card" style="padding:var(--space-lg); background:var(--bg-secondary)">
+          <div class="card" style="padding:var(--space-lg); background:var(--bg-secondary); max-height: 400px; overflow-y: auto">
             <h4>🔍 Research Summary</h4>
-            <div style="font-size:var(--font-xs); line-height:1.5; opacity:0.8; margin-top:var(--space-md)">${sanitize(researchData)}</div>
+            <div style="font-size:var(--font-xs); line-height:1.6; opacity:0.9; margin-top:var(--space-md)">${formatResearchContent(researchData)}</div>
           </div>
           <div style="display:flex; flex-direction:column; gap:var(--space-md)">
             ${titles.map(t => `
@@ -236,6 +241,16 @@ function renderTitlesSelection(titleResult, researchData, attachments) {
       });
     });
   }
+
+function formatResearchContent(text) {
+  if (!text) return '';
+  return sanitize(text)
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/\n\n/g, '<br/><br/>')
+    .replace(/\n/g, '<br/>')
+    .replace(/---/g, '<hr style="opacity:0.2; margin:10px 0" />');
+}
 
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
