@@ -43,8 +43,10 @@ export async function renderAIChatPage(userProfile) {
           
           <div style="display:flex; gap:var(--space-md); align-items: flex-end; position:relative">
             <div style="flex:1; position:relative">
-              <textarea id="chat-input" class="form-textarea" placeholder="Type your message here... (Shift+Enter for new line)" style="min-height:50px; max-height:150px; padding-left:45px; padding-top:14px; border-radius:var(--radius-lg)"></textarea>
-              <button class="btn-icon" id="btn-chat-attach" style="position:absolute; left:12px; bottom:12px; opacity:0.7; font-size:1.4rem" title="Attach image/file">📎</button>
+              <textarea id="chat-input" class="form-textarea" placeholder="Type your message here... (Shift+Enter for new line)" style="min-height:50px; max-height:150px; padding-left:55px; padding-top:14px; border-radius:var(--radius-lg)"></textarea>
+              <button class="btn-attach-premium" id="btn-chat-attach" style="position:absolute; left:12px; bottom:12px" title="Attach media">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+              </button>
               <input type="file" id="chat-file-input" class="hidden" accept="image/*,application/pdf" />
             </div>
             <button class="btn btn-primary" id="btn-chat-send" style="height:50px; width:50px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0">

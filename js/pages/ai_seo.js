@@ -18,8 +18,10 @@ export async function renderAISEOPage(userProfile, initialNiche = '') {
         <h2 style="margin-bottom:var(--space-md)">What's your next viral video topic?</h2>
         <div style="display:flex; flex-direction:column; gap:var(--space-md); max-width:600px; margin:0 auto">
           <div style="display:flex; gap:var(--space-md); width:100%; position:relative">
-            <input type="text" id="seo-niche-input" class="form-input" placeholder="e.g. US Aircraft Carriers in Middle East conflict" value="${sanitize(initialNiche)}" style="padding-left: 45px" />
-            <button class="btn-icon" id="btn-attach-file" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); opacity:0.7; font-size:1.2rem" title="Attach image/file">📎</button>
+            <input type="text" id="seo-niche-input" class="form-input" placeholder="e.g. US Aircraft Carriers in Middle East conflict" value="${sanitize(initialNiche)}" style="padding-left: 55px; height: 50px" />
+            <button class="btn-attach-premium" id="btn-attach-file" style="position:absolute; left:12px; top:50%; transform:translateY(-50%)" title="Attach media">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+            </button>
             <input type="file" id="seo-file-input" class="hidden" accept="image/*,application/pdf,text/plain" />
             <button class="btn btn-primary" id="btn-run-seo">✨ Run Agent</button>
           </div>
@@ -198,9 +200,16 @@ function initSEOEvents(userProfile) {
 
   function renderFinalSEO(title, research, descResult) {
     const container = document.getElementById('seo-results');
-    const fullDesc = descResult.split('[DESC]')[1]?.split('[/DESC]')[0] || descResult;
-    const tags = fullDesc.split('[TAGS]')[1]?.split('[/TAGS]')[0] || "";
-    const cleanDesc = fullDesc.replace(/\[TAGS\].*?\[\/TAGS\]/gs, '').trim();
+    
+    // Improved Extracting via regex [\s\S] for multiline
+    const descMatch = descResult.match(/\[DESC\]([\s\S]*?)\[\/DESC\]/i);
+    const tagsMatch = descResult.match(/\[TAGS\]([\s\S]*?)\[\/TAGS\]/i);
+    
+    const rawDesc = descMatch ? descMatch[1].trim() : descResult;
+    const tags = tagsMatch ? tagsMatch[1].trim() : "";
+    
+    // Strip tags block from description if it was nested
+    const cleanDesc = rawDesc.replace(/\[TAGS\][\s\S]*?\[\/TAGS\]/gi, '').trim();
 
     container.innerHTML = `
       <div class="fade-in" style="display:grid; grid-template-columns:1fr 1.5fr; gap:var(--space-xl)">
