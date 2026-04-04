@@ -77,6 +77,7 @@ export function canAccessPage(userRole, pageName) {
     yt_dashboard: 'view_dashboard',
     office_yt: 'view_dashboard',
     freelance_dashboard: 'view_dashboard',
+    ai_seo: 'view_dashboard',
     tasks: 'view_own_tasks',
     orders: 'view_own_orders',
     team: 'manage_team',
