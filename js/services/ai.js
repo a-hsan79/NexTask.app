@@ -114,13 +114,13 @@ Identify 3 'Low Competition' but 'High Opportunity' angles. Return as a clear li
 
   async generateTitlesOnly(researchData, attachments = []) {
     const customPersona = localStorage.getItem('ai_custom_instructions') || '';
-    const titlePrompt = `Act as a YouTube CTR Expert (2025 Specialist). ${customPersona ? `PERSONA: ${customPersona}` : ''}\n\nBased on this research: ${researchData}\n\nGenerate 5 High-CTR 'Viral' Titles. Each title MUST be between 60 to 90 characters for maximum impact and SEO coverage. Wrap each title in [TITLE] tags. Focus on high-retention curiosity gaps.`;
+    const titlePrompt = `Act as a YouTube CTR Specialist (2025). ${customPersona ? `PERSONA: ${customPersona}` : ''}\n\nBased on this research: ${researchData}\n\nGenerate 5 High-CTR 'Viral' Titles (under 50 chars). Wrap each title in [TITLE] tags. Focus on curiosity gaps and search intent.`;
     return await this.callModel(titlePrompt, attachments);
   },
 
   async generateFullDescription(selectedTitle, researchData, attachments = []) {
     const customPersona = localStorage.getItem('ai_custom_instructions') || '';
-    const descPrompt = `Act as a world-class YouTube SEO Copywriter. ${customPersona ? `PERSONA: ${customPersona}` : ''}\n\nTitle chosen: "${selectedTitle}"\nContext: ${researchData}\n\nProduce a 5-Part 'Copy-Paste Ready' SEO Pack:\n- PART 1 (Description): A detailed, high-engagement summary of exactly 300 words. Use relevant keywords naturally.\n- PART 2 (Highlights): 3 key points from the video.\n- PART 3 (Social): Engagement CTA (Like/Sub).\n- PART 4 (Disclaimer): Fair-use/Copyright disclaimer.\n- PART 5 (Tags): 10 High-Volume tags separated by commas.\n\nFORMATTING: Wrap everything from PART 1 to PART 4 inside [DESC] tags and PART 5 strictly inside [TAGS] tags. Ensure [TAGS] are never empty!`;
+    const descPrompt = `Act as an expert YouTube SEO Copywriter. ${customPersona ? `PERSONA: ${customPersona}` : ''}\n\nFor the video title: "${selectedTitle}"\nBased on research: ${researchData}\n\nCompose a 5-Part 'Copy-Paste Ready' Description in this EXACT order:\n- PART 1 (Description): A detailed, engaging summary of EXACTLY 300 words. Be descriptive and use SEO keywords.\n- PART 2 (Highlights): Exactly 3 key highlights.\n- PART 3 (Social): Like & Subscribe CTA.\n- PART 4 (Disclaimer): Fair-use disclaimer.\n- PART 5 (Tags): 10 High-CTR tags separated by commas.\n\nFORMATTING: Wrap description in [DESC] tags and tags in [TAGS] tags.`;
     return await this.callModel(descPrompt, attachments);
   }
 };
