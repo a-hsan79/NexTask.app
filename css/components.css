@@ -634,6 +634,12 @@
   transition: all 0.2s ease;
 }
 
+.title-select-card:hover {
+  border-color: var(--primary) !important;
+  background: var(--bg-hover) !important;
+  transform: translateX(5px);
+}
+
 .attachment-card:hover {
   border-color: var(--primary);
   background: var(--bg-hover) !important;

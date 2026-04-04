@@ -31,11 +31,15 @@ export async function renderAISEOPage(userProfile, initialNiche = '') {
         <div class="workflow-stepper" style="display:flex; justify-content:center; gap:var(--space-xl); margin-bottom:var(--space-lg)">
             <div class="step" id="step-1">
                 <span class="step-num">1</span>
-                <span>Deep Research</span>
+                <span>Research</span>
             </div>
             <div class="step" id="step-2">
                 <span class="step-num">2</span>
-                <span>CTR Optimization</span>
+                <span>Titles</span>
+            </div>
+            <div class="step" id="step-3">
+                <span class="step-num">3</span>
+                <span>Final SEO Pack</span>
             </div>
         </div>
         
@@ -125,17 +129,17 @@ function initSEOEvents(userProfile) {
       // Step 1: Research
       const researchData = await AIService.runResearchWorkflow(niche, currentAttachments);
       step1.classList.remove('active');
-      step1.innerHTML = `<span class="step-num">✅</span> <span>Deep Research</span>`;
+      step1.innerHTML = `<span class="step-num">✅</span> <span>Research</span>`;
       
-      // Step 2: Optimization
+      // Step 2: Titles
       step2.classList.add('active');
-      results.innerHTML += `<div class="loader-container"><div class="spinner"></div><p>Generating High-CTR Titles & Description...</p></div>`;
+      results.innerHTML = `<div class="loader-container"><div class="spinner"></div><p>Generating Viral Titles...</p></div>`;
       
-      const optResult = await AIService.runOptimizationWorkflow(researchData, currentAttachments);
+      const titleResult = await AIService.generateTitlesOnly(researchData, currentAttachments);
       step2.classList.remove('active');
-      step2.innerHTML = `<span class="step-num">✅</span> <span>CTR Optimization</span>`;
+      step2.innerHTML = `<span class="step-num">✅</span> <span>Titles</span>`;
       
-      renderSEOResults(researchData, optResult);
+      renderTitlesSelection(titleResult, researchData, currentAttachments);
     } catch (err) {
       showToast(err.message, 'error');
       results.innerHTML = `<div class="error-state"><p>${err.message}</p></div>`;
@@ -143,72 +147,95 @@ function initSEOEvents(userProfile) {
   });
 }
 
-function renderSEOResults(research, optimization) {
-  const container = document.getElementById('seo-results');
-  
-  // Parse Titles
-  const titles = optimization.match(/\[TITLE\](.*?)\[\/TITLE\]/g)?.map(t => t.replace(/\[\/?TITLE\]/g, '').trim()) || [];
-  
-  // Parse Description (Remove TAGS for the description box)
-  let fullDesc = optimization.split('[DESC]')[1]?.split('[/DESC]')[0] || optimization;
-  const tags = fullDesc.split('[TAGS]')[1]?.split('[/TAGS]')[0] || "";
-  const cleanDesc = fullDesc.replace(/\[TAGS\].*?\[\/TAGS\]/s, '').trim();
-
-  container.innerHTML = `
-    <div class="results-grid" style="display:grid; grid-template-columns:1fr 1.2fr; gap:var(--space-lg); animation: slideUp 0.4s easeOut">
-      <div class="card" style="padding:var(--space-lg)">
-        <h3 style="margin-bottom:var(--space-md)">🔍 Strategic Angles</h3>
-        <div class="ai-text-content" style="white-space:pre-wrap; font-size:var(--font-sm); opacity:0.9">
-          ${sanitize(research)}
-        </div>
-      </div>
-      
-      <div style="display:flex; flex-direction:column; gap:var(--space-lg)">
-        <!-- Titles Section -->
-        <div class="card" style="padding:var(--space-lg)">
-          <h3 style="margin-bottom:var(--space-md)">🔥 High-CTR Titles</h3>
-          <div style="display:flex; flex-direction:column; gap:var(--space-sm)">
-            ${titles.map((t, i) => `
-              <div class="title-copy-row" style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-secondary); padding:var(--space-sm) var(--space-md); border-radius:var(--radius-md)">
-                <span style="font-size:var(--font-sm)">${sanitize(t)}</span>
-                <button class="btn btn-ghost btn-sm btn-copy" data-copy="${sanitize(t)}">📋</button>
+function renderTitlesSelection(titleResult, researchData, attachments) {
+    const results = document.getElementById('seo-results');
+    const titles = titleResult.match(/\[TITLE\](.*?)\[\/TITLE\]/g)?.map(t => t.replace(/\[\/?TITLE\]/g, '').trim()) || [];
+    
+    results.innerHTML = `
+      <div class="fade-in">
+        <h3 style="text-align:center; margin-bottom:var(--space-lg)">Step 2: Choose your favorite title 🎯</h3>
+        <div style="display:grid; grid-template-columns:1fr 1.2fr; gap:var(--space-lg)">
+          <div class="card" style="padding:var(--space-lg); background:var(--bg-secondary)">
+            <h4>🔍 Research Summary</h4>
+            <div style="font-size:var(--font-xs); line-height:1.5; opacity:0.8; margin-top:var(--space-md)">${sanitize(researchData)}</div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:var(--space-md)">
+            ${titles.map(t => `
+              <div class="card title-select-card" style="padding:var(--space-md); display:flex; justify-content:space-between; align-items:center; border:1px solid var(--border-light); transition:all 0.2s">
+                <span style="font-weight:500; font-size:var(--font-sm)">${sanitize(t)}</span>
+                <button class="btn btn-primary btn-sm btn-select-title" data-title="${sanitize(t)}">Write SEO Pack</button>
               </div>
             `).join('')}
           </div>
         </div>
-        
-        <!-- Description Section -->
-        <div class="card" style="padding:var(--space-lg)">
-          <h3 style="margin-bottom:var(--space-md)">📝 Ready Description Template</h3>
-          <div style="background:var(--bg-secondary); padding:var(--space-md); border-radius:var(--radius-md); font-family:monospace; font-size:var(--font-xs); white-space:pre-wrap; max-height:250px; overflow-y:auto">
-            ${sanitize(cleanDesc)}
-          </div>
-          <button class="btn btn-secondary btn-sm btn-copy" data-copy="${sanitize(cleanDesc)}" style="width:100%; margin-top:var(--space-md)">Copy Full Description</button>
-        </div>
-
-        <!-- Tags Section -->
-        ${tags ? `
-        <div class="card" style="padding:var(--space-lg)">
-          <h3 style="margin-bottom:var(--space-md)">🏷️ High-CTR Tags</h3>
-          <div style="background:var(--bg-secondary); padding:var(--space-md); border-radius:var(--radius-md); font-family:monospace; font-size:var(--font-xs); color:var(--primary-light)">
-            ${sanitize(tags)}
-          </div>
-          <button class="btn btn-secondary btn-sm btn-copy" data-copy="${sanitize(tags)}" style="width:100%; margin-top:var(--space-md)">Copy All Tags</button>
-        </div>
-        ` : ''}
       </div>
-    </div>
-  `;
-  
-  container.querySelectorAll('.btn-copy').forEach(btn => {
-    btn.addEventListener('click', () => {
-      navigator.clipboard.writeText(btn.dataset.copy);
-      showToast('Copied to clipboard!', 'success');
-      btn.textContent = '✅';
-      setTimeout(() => btn.textContent = btn.classList.contains('btn-ghost') ? '📋' : 'Copy Template', 2000);
+    `;
+
+    results.querySelectorAll('.btn-select-title').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const title = btn.dataset.title;
+        const step3 = document.getElementById('step-3');
+        
+        step3.classList.add('active');
+        results.innerHTML = `<div class="loader-container"><div class="spinner"></div><p>Writing a 300-word SEO Masterpiece for:<br><strong>"${title}"</strong></p></div>`;
+        
+        try {
+          const descResult = await AIService.generateFullDescription(title, researchData, attachments);
+          step3.classList.remove('active');
+          step3.innerHTML = `<span class="step-num">✅</span> <span>Final SEO Pack</span>`;
+          renderFinalSEO(title, researchData, descResult);
+        } catch (err) {
+          showToast(err.message, 'error');
+        }
+      });
     });
-  });
-}
+  }
+
+  function renderFinalSEO(title, research, descResult) {
+    const container = document.getElementById('seo-results');
+    const fullDesc = descResult.split('[DESC]')[1]?.split('[/DESC]')[0] || descResult;
+    const tags = fullDesc.split('[TAGS]')[1]?.split('[/TAGS]')[0] || "";
+    const cleanDesc = fullDesc.replace(/\[TAGS\].*?\[\/TAGS\]/gs, '').trim();
+
+    container.innerHTML = `
+      <div class="fade-in" style="display:grid; grid-template-columns:1fr 1.5fr; gap:var(--space-xl)">
+        <div class="card" style="padding:var(--space-lg); border-right:1px solid var(--border-light)">
+          <h3>"${sanitize(title)}"</h3>
+          <p class="subtitle" style="margin-top:var(--space-xs)">Strategic Context</p>
+          <div style="font-size:var(--font-xs); margin-top:var(--space-md); opacity:0.8">${sanitize(research)}</div>
+        </div>
+        
+        <div style="display:flex; flex-direction:column; gap:var(--space-lg)">
+           <div class="card" style="padding:var(--space-lg)">
+              <h3 style="margin-bottom:var(--space-md)">📝 Ready Description Template (300 Words)</h3>
+              <div style="background:var(--bg-secondary); padding:var(--space-md); border-radius:var(--radius-md); font-family:monospace; font-size:var(--font-xs); white-space:pre-wrap; max-height:400px; overflow-y:auto">
+                ${sanitize(cleanDesc)}
+              </div>
+              <button class="btn btn-secondary btn-sm btn-copy" data-copy="${sanitize(cleanDesc)}" style="width:100%; margin-top:var(--space-md)">Copy Full Description</button>
+           </div>
+           
+           ${tags ? `
+           <div class="card" style="padding:var(--space-lg)">
+             <h3 style="margin-bottom:var(--space-md)">🏷️ SEO Tags</h3>
+             <div style="background:var(--bg-secondary); padding:var(--space-md); border-radius:var(--radius-md); font-family:monospace; font-size:var(--font-xs); color:var(--primary-light)">
+               ${sanitize(tags)}
+             </div>
+             <button class="btn btn-secondary btn-sm btn-copy" data-copy="${sanitize(tags)}" style="width:100%; margin-top:var(--space-md)">Copy Tags</button>
+           </div>
+           ` : ''}
+        </div>
+      </div>
+    `;
+
+    container.querySelectorAll('.btn-copy').forEach(btn => {
+      btn.addEventListener('click', () => {
+        navigator.clipboard.writeText(btn.dataset.copy);
+        showToast('Copied!', 'success');
+        btn.textContent = '✅';
+        setTimeout(() => btn.textContent = 'Copy', 2000);
+      });
+    });
+  }
 
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
