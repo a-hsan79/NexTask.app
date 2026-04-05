@@ -1,12 +1,15 @@
 // ===========================
-// NexTask — AI Research Service
+// NexTask — Multi-Provider AI Service
 // ===========================
 
-const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-
 export const AIService = {
+  getProvider() {
+    return localStorage.getItem('ai_provider') || 'openrouter';
+  },
+
   getApiKey() {
-    return localStorage.getItem('openrouter_api_key');
+    const provider = this.getProvider();
+    return localStorage.getItem(`${provider}_api_key`) || localStorage.getItem('openrouter_api_key');
   },
 
   getModel() {
@@ -14,35 +17,41 @@ export const AIService = {
   },
 
   async callModel(prompt, attachments = []) {
+    const provider = this.getProvider();
     const apiKey = this.getApiKey();
     const model = this.getModel();
     
-    if (!apiKey) {
-      throw new Error("Please set your OpenRouter API Key in Settings first.");
-    }
-
-    // Build multi-modal messages if attachments exist
-    let content;
-    if (attachments && attachments.length > 0) {
-      content = [
-        { type: "text", text: prompt },
-        ...attachments.map(att => ({
-          type: "image_url",
-          image_url: { url: att } // att is base64 data URL
-        }))
-      ];
-    } else {
-      content = prompt;
+    if (!apiKey || apiKey.length < 5) {
+      throw new Error(`Please set your ${provider.toUpperCase()} API Key in Settings first.`);
     }
 
     try {
-      const response = await fetch(OPENROUTER_URL, {
+      if (provider === 'anthropic') return await this.callAnthropic(model, [{ role: 'user', content: prompt }], attachments);
+      if (provider === 'google') return await this.callGoogle(model, [{ role: 'user', content: prompt }], attachments);
+      
+      // Default for OpenAI and OpenRouter (OpenAI-compatible)
+      const endpoint = provider === 'openai' ? 'https://api.openai.com/v1/chat/completions' : 'https://openrouter.ai/api/v1/chat/completions';
+      
+      let content;
+      if (attachments && attachments.length > 0) {
+        content = [
+          { type: "text", text: prompt },
+          ...attachments.map(att => ({
+            type: "image_url",
+            image_url: { url: att }
+          }))
+        ];
+      } else {
+        content = prompt;
+      }
+
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${apiKey}`,
           "Content-Type": "application/json",
-          "HTTP-Referer": window.location.origin,
-          "X-Title": "NexTask AI Agent",
+          "HTTP-Referer": window.location.origin || "http://localhost:3000",
+          "X-Title": "NexTube App",
         },
         body: JSON.stringify({
           model: model,
@@ -52,54 +61,160 @@ export const AIService = {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error?.message || "Failed to call AI model");
+        throw new Error(errorData.error?.message || `API Error: ${response.statusText}`);
       }
 
       const data = await response.json();
       return data.choices[0].message.content;
     } catch (err) {
-      console.error('AI Service Error:', err);
+      console.error(`${provider.toUpperCase()} Service Error:`, err);
       throw err;
     }
   },
 
   async callChat(userMessage, history = [], attachments = []) {
+    const provider = this.getProvider();
     const apiKey = this.getApiKey();
     const model = this.getModel();
     const customPersona = localStorage.getItem('ai_custom_instructions') || '';
     
-    if (!apiKey) throw new Error("Please set your OpenRouter API Key in Settings.");
+    if (!apiKey || apiKey.length < 5) {
+      throw new Error(`Please set your ${provider.toUpperCase()} API Key in Settings.`);
+    }
 
-    // Format messages for Chat History
-    const apiMessages = [
+    const messages = [
       { role: "system", content: `You are a helpful NexTube AI Assistant. ${customPersona ? `PERSONA: ${customPersona}` : ''}` },
       ...history,
-      { role: "user", content: attachments.length > 0 ? [
-          { type: "text", text: userMessage },
-          ...attachments.map(att => ({ type: "image_url", image_url: { url: att } }))
-        ] : userMessage 
-      }
+      { role: "user", content: userMessage }
     ];
 
     try {
-      const response = await fetch(OPENROUTER_URL, {
+      if (provider === 'anthropic') return await this.callAnthropic(model, messages, attachments);
+      if (provider === 'google') return await this.callGoogle(model, messages, attachments);
+
+      // Default OpenAI-compatible
+      const endpoint = provider === 'openai' ? 'https://api.openai.com/v1/chat/completions' : 'https://openrouter.ai/api/v1/chat/completions';
+      
+      const apiMessages = messages.map((m, i) => {
+          if (i === messages.length - 1 && attachments.length > 0) {
+              return {
+                  role: m.role,
+                  content: [
+                      { type: "text", text: m.content },
+                      ...attachments.map(att => ({ type: "image_url", image_url: { url: att } }))
+                  ]
+              };
+          }
+          return m;
+      });
+
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${apiKey}`,
           "Content-Type": "application/json",
-          "HTTP-Referer": window.location.origin,
-          "X-Title": "NexTask AI Bot",
+          "HTTP-Referer": window.location.origin || "http://localhost:3000",
+          "X-Title": "NexTube App",
         },
         body: JSON.stringify({ model, messages: apiMessages })
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error?.message || "Chat failed");
+        throw new Error(errorData.error?.message || `Chat API Error: ${response.statusText}`);
       }
       const data = await response.json();
       return data.choices[0].message.content;
     } catch (err) { throw err; }
+  },
+
+  // Anthropic Specific Implementation
+  async callAnthropic(model, messages, attachments = []) {
+    const apiKey = this.getApiKey();
+    const system_msg = messages.find(m => m.role === 'system')?.content || '';
+    const user_msgs = messages.filter(m => m.role !== 'system');
+    
+    // Format attachments for Anthropic
+    const lastMsgContent = user_msgs[user_msgs.length - 1].content;
+    const finalContent = attachments.length > 0 ? [
+        ...attachments.map(att => {
+            const [meta, data] = att.split(',');
+            const mediaType = meta.split(':')[1].split(';')[0];
+            return {
+                type: "image",
+                source: { type: "base64", media_type: mediaType, data: data }
+            };
+        }),
+        { type: "text", text: lastMsgContent }
+    ] : lastMsgContent;
+
+    user_msgs[user_msgs.length - 1].content = finalContent;
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+            'content-type': 'application/json',
+            'dangerously-allow-browser': 'true' // For front-end direct calls
+        },
+        body: JSON.stringify({
+            model: model.includes('/') ? model.split('/')[1] : model, // strip provider prefix if any
+            system: system_msg,
+            messages: user_msgs,
+            max_tokens: 1024
+        })
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error?.message || "Anthropic API Error");
+    }
+    const data = await response.json();
+    return data.content[0].text;
+  },
+
+  // Google Gemini Specific Implementation
+  async callGoogle(model, messages, attachments = []) {
+    const apiKey = this.getApiKey();
+    const cleanModel = model.includes('/') ? model.split('/')[1] : model;
+    
+    // Gemini message format
+    const contents = messages.filter(m => m.role !== 'system').map(m => ({
+        role: m.role === 'user' ? 'user' : 'model',
+        parts: [{ text: m.content }]
+      }));
+
+    // System prompt as a special instruction
+    const systemValue = messages.find(m => m.role === 'system')?.content;
+    
+    // Handle attachments for Gemini
+    if (attachments.length > 0) {
+        const lastPart = contents[contents.length - 1].parts;
+        attachments.forEach(att => {
+            const [meta, data] = att.split(',');
+            const mimeType = meta.split(':')[1].split(';')[0];
+            lastPart.unshift({
+                inline_data: { mime_type: mimeType, data: data }
+            });
+        });
+    }
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateContent?key=${apiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: contents,
+        system_instruction: systemValue ? { parts: [{ text: systemValue }] } : undefined
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || "Gemini API Error");
+    }
+    const data = await response.json();
+    return data.candidates[0].content.parts[0].text;
   },
 
   async runResearchWorkflow(niche, attachments = []) {

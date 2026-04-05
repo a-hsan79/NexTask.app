@@ -108,27 +108,29 @@ export async function renderSettingsPage(userProfile) {
 
         <!-- AI Config Card -->
         <div class="card" style="padding:var(--space-xl)">
-          <h3 style="margin-bottom:var(--space-lg);display:flex;align-items:center;gap:var(--space-sm)">🤖 AI Developer Config</h3>
-          <p class="subtitle" style="margin-bottom:var(--space-md)">Used for YouTube SEO Studio & Research Agents</p>
+          <h3 style="margin-bottom:var(--space-lg);display:flex;align-items:center;gap:var(--space-sm)">🤖 AI Multi-Provider Config</h3>
+          <p class="subtitle" style="margin-bottom:var(--space-md)">Switch between OpenRouter, OpenAI, Anthropic, or Gemini</p>
           
           <div class="form-group">
-            <label class="form-label">OpenRouter API Key</label>
-            <input type="password" class="form-input" id="settings-openrouter-key" placeholder="sk-or-v1-..." value="${localStorage.getItem('openrouter_api_key') || ''}" />
-            <p style="font-size:var(--font-xs);color:var(--text-muted);margin-top:var(--space-xs)">Your key is stored locally in this browser.</p>
+            <label class="form-label">Active AI Provider</label>
+            <select class="form-select" id="settings-ai-provider">
+              <option value="openrouter" ${localStorage.getItem('ai_provider') === 'openrouter' ? 'selected' : ''}>OpenRouter (Omni-Aggregator)</option>
+              <option value="anthropic" ${localStorage.getItem('ai_provider') === 'anthropic' ? 'selected' : ''}>Anthropic (Claude Direct)</option>
+              <option value="openai" ${localStorage.getItem('ai_provider') === 'openai' ? 'selected' : ''}>OpenAI (ChatGPT Direct)</option>
+              <option value="google" ${localStorage.getItem('ai_provider') === 'google' ? 'selected' : ''}>Google AI (Gemini Direct)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" id="key-label">API Key</label>
+            <input type="password" class="form-input" id="settings-ai-key" placeholder="Enter key..." />
+            <p style="font-size:var(--font-xs);color:var(--text-muted);margin-top:var(--space-xs)">Keys stay in your browser's private storage.</p>
           </div>
 
           <div class="form-group">
             <label class="form-label">Preferred AI Model</label>
             <select class="form-select" id="settings-ai-model">
-              <optgroup label="Free Models">
-                <option value="openrouter/auto" ${localStorage.getItem('ai_model') === 'openrouter/auto' ? 'selected' : ''}>Auto (Free Selection)</option>
-                <option value="meta-llama/llama-3.1-405b-instruct" ${localStorage.getItem('ai_model') === 'meta-llama/llama-3.1-405b-instruct' ? 'selected' : ''}>Llama 3.1 405B (Free-tier)</option>
-              </optgroup>
-              <optgroup label="Premium Performance">
-                <option value="anthropic/claude-3.5-sonnet" ${localStorage.getItem('ai_model') === 'anthropic/claude-3.5-sonnet' ? 'selected' : ''}>Claude 3.5 Sonnet (Recommended)</option>
-                <option value="openai/gpt-4o-2024-08-06" ${localStorage.getItem('ai_model') === 'openai/gpt-4o-2024-08-06' ? 'selected' : ''}>GPT-4o (Omni)</option>
-                <option value="google/gemini-pro-1.5" ${localStorage.getItem('ai_model') === 'google/gemini-pro-1.5' ? 'selected' : ''}>Gemini Pro 1.5</option>
-              </optgroup>
+              <!-- Dynamically populated -->
             </select>
           </div>
 
@@ -359,16 +361,68 @@ function initSettingsEvents(userProfile) {
     } catch (err) { showToast('Export failed: ' + err.message, 'error'); }
   });
 
-  // Save AI Config
+  // Multi-Provider AI Config Logic
+  const providerSelect = document.getElementById('settings-ai-provider');
+  const keyInput = document.getElementById('settings-ai-key');
+  const keyLabel = document.getElementById('key-label');
+  const modelSelect = document.getElementById('settings-ai-model');
+
+  const updateAIFields = () => {
+    const provider = providerSelect.value;
+    keyLabel.textContent = `${provider.charAt(0).toUpperCase() + provider.slice(1)} API Key`;
+    keyInput.value = localStorage.getItem(`${provider}_api_key`) || '';
+    keyInput.placeholder = provider === 'anthropic' ? 'sk-ant-api03-...' : (provider === 'openai' ? 'sk-...' : 'Enter key...');
+    
+    // Update Models
+    let models = [];
+    if (provider === 'openrouter') {
+      models = [
+        { v: 'openrouter/auto', n: 'Auto (Free Selection)' },
+        { v: 'meta-llama/llama-3.1-405b-instruct', n: 'Llama 3.1 405B' },
+        { v: 'anthropic/claude-3.5-sonnet', n: 'Claude 3.5 Sonnet' },
+        { v: 'openai/gpt-4o-2024-08-06', n: 'GPT-4o' }
+      ];
+    } else if (provider === 'anthropic') {
+      models = [
+        { v: 'claude-3-5-sonnet-20240620', n: 'Claude 3.5 Sonnet' },
+        { v: 'claude-3-opus-20240229', n: 'Claude 3 Opus' },
+        { v: 'claude-3-haiku-20240307', n: 'Claude 3 Haiku' }
+      ];
+    } else if (provider === 'openai') {
+      models = [
+        { v: 'gpt-4o', n: 'GPT-4o' },
+        { v: 'gpt-4o-mini', n: 'GPT-4o Mini' },
+        { v: 'gpt-3.5-turbo', n: 'GPT-3.5 Turbo' }
+      ];
+    } else if (provider === 'google') {
+      models = [
+        { v: 'gemini-1.5-pro', n: 'Gemini 1.5 Pro' },
+        { v: 'gemini-1.5-flash', n: 'Gemini 1.5 Flash' }
+      ];
+    }
+
+    const currentModel = localStorage.getItem('ai_model');
+    modelSelect.innerHTML = models.map(m => `<option value="${m.v}" ${currentModel === m.v ? 'selected' : ''}>${m.n}</option>`).join('');
+  };
+
+  providerSelect?.addEventListener('change', updateAIFields);
+  updateAIFields(); // Initial load
+
   document.getElementById('btn-save-ai-config')?.addEventListener('click', () => {
-    const key = document.getElementById('settings-openrouter-key').value.trim();
-    const model = document.getElementById('settings-ai-model').value;
+    const provider = providerSelect.value;
+    const key = keyInput.value.trim();
+    const model = modelSelect.value;
     const instructions = document.getElementById('settings-ai-instructions').value.trim();
     
-    localStorage.setItem('openrouter_api_key', key);
+    localStorage.setItem('ai_provider', provider);
+    localStorage.setItem(`${provider}_api_key`, key);
     localStorage.setItem('ai_model', model);
     localStorage.setItem('ai_custom_instructions', instructions);
-    showToast('AI Configuration saved! 🤖', 'success');
+    
+    // For backwards compatibility
+    if (provider === 'openrouter') localStorage.setItem('openrouter_api_key', key);
+    
+    showToast(`${provider.toUpperCase()} Configuration saved! 🤖`, 'success');
   });
 }
 
