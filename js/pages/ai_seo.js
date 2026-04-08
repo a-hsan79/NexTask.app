@@ -1,15 +1,15 @@
 import { AIService } from '../services/ai.js';
-import { sanitize, showToast } from '../utils/helpers.js';
+import { sanitize, showToast, renderIcon } from '../utils/helpers.js';
 
 export async function renderAISEOPage(userProfile, initialNiche = '') {
   const mainContent = document.getElementById('main-content');
   
   mainContent.innerHTML = `
     <div class="fade-in">
-      <button class="back-btn" id="btn-back-yt-dash">← Back to Dashboard</button>
+      <button class="back-btn" id="btn-back-yt-dash">${renderIcon('arrow-left')} Back to Dashboard</button>
       <div class="page-header">
         <div>
-          <h1>✨ AI SEO Studio</h1>
+          <h1>${renderIcon('sparkles')} AI SEO Studio</h1>
           <p class="subtitle">Research niches and optimize your video CTR with advanced AI</p>
         </div>
       </div>
@@ -19,9 +19,9 @@ export async function renderAISEOPage(userProfile, initialNiche = '') {
         <div style="display:flex; flex-direction:column; gap:var(--space-md); max-width:600px; margin:0 auto">
           <div style="display:flex; gap:var(--space-md); width:100%; position:relative">
             <input type="text" id="seo-niche-input" class="form-input" placeholder="e.g. US Aircraft Carriers in Middle East conflict" value="${sanitize(initialNiche)}" style="padding-left: 45px" />
-            <button class="btn-icon" id="btn-attach-file" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); opacity:0.7; font-size:1.2rem" title="Attach image/file">📎</button>
+            <button class="btn-icon" id="btn-attach-file" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); opacity:0.7; font-size:1.2rem" title="Attach image/file">${renderIcon('paperclip')}</button>
             <input type="file" id="seo-file-input" class="hidden" accept="image/*,application/pdf,text/plain" />
-            <button class="btn btn-primary" id="btn-run-seo">✨ Run Agent</button>
+            <button class="btn btn-primary" id="btn-run-seo">${renderIcon('zap')} Run Agent</button>
           </div>
           <div id="attachment-preview-container" class="hidden" style="margin-top:var(--space-sm)"></div>
         </div>
@@ -96,9 +96,9 @@ function initSEOEvents(userProfile) {
     div.className = 'attachment-card';
     div.style = 'display:inline-flex; align-items:center; gap:var(--space-sm); background:var(--bg-secondary); padding:var(--space-xs) var(--space-sm); border-radius:var(--radius-md); border:1px solid var(--primary-glow); margin:5px';
     div.innerHTML = `
-      ${isImage ? `<img src="${base64}" style="width:24px; height:24px; border-radius:4px; object-fit:cover" />` : '📄'}
+      ${isImage ? `<img src="${base64}" style="width:24px; height:24px; border-radius:4px; object-fit:cover" />` : renderIcon('file-text', 'meta-icon')}
       <span style="font-size:var(--font-xs); max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${sanitize(file.name)}</span>
-      <span class="remove-att" style="cursor:pointer; font-weight:bold; color:var(--danger)">×</span>
+      <span class="remove-att" style="cursor:pointer; font-weight:bold; color:var(--danger)">${renderIcon('x', 'meta-icon')}</span>
     `;
     div.querySelector('.remove-att').onclick = () => {
       currentAttachments = currentAttachments.filter(a => a !== base64);
@@ -129,7 +129,7 @@ function initSEOEvents(userProfile) {
       // Step 1: Research
       const researchData = await AIService.runResearchWorkflow(niche, currentAttachments);
       step1.classList.remove('active');
-      step1.innerHTML = `<span class="step-num">✅</span> <span>Research</span>`;
+      step1.innerHTML = `<span class="step-num">${renderIcon('check')}</span> <span>Research</span>`;
       
       // Step 2: Titles
       step2.classList.add('active');
@@ -137,7 +137,7 @@ function initSEOEvents(userProfile) {
       
       const titleResult = await AIService.generateTitlesOnly(researchData, currentAttachments);
       step2.classList.remove('active');
-      step2.innerHTML = `<span class="step-num">✅</span> <span>Titles</span>`;
+      step2.innerHTML = `<span class="step-num">${renderIcon('check')}</span> <span>Titles</span>`;
       
       renderTitlesSelection(titleResult, researchData, currentAttachments);
     } catch (err) {
@@ -159,9 +159,9 @@ function initSEOEvents(userProfile) {
     
     results.innerHTML = `
       <div class="fade-in">
-        <h3 style="text-align:center; margin-bottom:var(--space-lg)">Step 2: Choose your favorite title 🎯</h3>
+        <h3 style="text-align:center; margin-bottom:var(--space-lg)">Step 2: Choose your favorite title ${renderIcon('target', 'inline-icon')}</h3>
           <div class="card" style="padding:var(--space-lg); background:var(--bg-secondary); max-height: 400px; overflow-y: auto">
-            <h4>🔍 Research Summary</h4>
+            <h4>${renderIcon('search', 'meta-icon')} Research Summary</h4>
             <div style="font-size:var(--font-xs); line-height:1.6; opacity:0.9; margin-top:var(--space-md)">${formatResearchContent(researchData)}</div>
           </div>
           <div style="display:flex; flex-direction:column; gap:var(--space-md)">
@@ -187,7 +187,7 @@ function initSEOEvents(userProfile) {
         try {
           const descResult = await AIService.generateFullDescription(title, researchData, attachments);
           step3.classList.remove('active');
-          step3.innerHTML = `<span class="step-num">✅</span> <span>Final SEO Pack</span>`;
+          step3.innerHTML = `<span class="step-num">${renderIcon('check')}</span> <span>Final SEO Pack</span>`;
           renderFinalSEO(title, researchData, descResult);
         } catch (err) {
           showToast(err.message, 'error');
@@ -212,7 +212,7 @@ function initSEOEvents(userProfile) {
         
         <div style="display:flex; flex-direction:column; gap:var(--space-lg)">
            <div class="card" style="padding:var(--space-lg)">
-              <h3 style="margin-bottom:var(--space-md)">📝 Ready Description Template (300 Words)</h3>
+              <h3 style="margin-bottom:var(--space-md)">${renderIcon('file-text')} Ready Description Template (300 Words)</h3>
               <div style="background:var(--bg-secondary); padding:var(--space-md); border-radius:var(--radius-md); font-family:monospace; font-size:var(--font-xs); white-space:pre-wrap; max-height:400px; overflow-y:auto">
                 ${sanitize(cleanDesc)}
               </div>
@@ -221,7 +221,7 @@ function initSEOEvents(userProfile) {
            
            ${tags ? `
            <div class="card" style="padding:var(--space-lg)">
-             <h3 style="margin-bottom:var(--space-md)">🏷️ SEO Tags</h3>
+             <h3 style="margin-bottom:var(--space-md)">${renderIcon('tag')} SEO Tags</h3>
              <div style="background:var(--bg-secondary); padding:var(--space-md); border-radius:var(--radius-md); font-family:monospace; font-size:var(--font-xs); color:var(--primary-light)">
                ${sanitize(tags)}
              </div>
@@ -236,7 +236,7 @@ function initSEOEvents(userProfile) {
       btn.addEventListener('click', () => {
         navigator.clipboard.writeText(btn.dataset.copy);
         showToast('Copied!', 'success');
-        btn.textContent = '✅';
+        btn.textContent = 'Copied';
         setTimeout(() => btn.textContent = 'Copy', 2000);
       });
     });

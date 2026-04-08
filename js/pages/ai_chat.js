@@ -1,5 +1,5 @@
 import { AIService } from '../services/ai.js';
-import { sanitize, showToast } from '../utils/helpers.js';
+import { sanitize, showToast, renderIcon } from '../utils/helpers.js';
 
 let conversationHistory = [];
 let chatAttachments = [];
@@ -12,10 +12,10 @@ export async function renderAIChatPage(userProfile) {
       <div class="page-header" style="margin-bottom: var(--space-md)">
         <div style="display:flex; justify-content:space-between; align-items:center; width:100%">
           <div>
-            <h1 style="font-size: 1.5rem">🤖 NexTube AI Assistant</h1>
+            <h1 style="font-size: 1.5rem">${renderIcon('message-square')} NexTube AI Assistant</h1>
             <p class="subtitle">Conversational Q&A with Memory Support</p>
           </div>
-          <button class="btn btn-ghost" id="btn-back-dash">← Dashboard</button>
+          <button class="btn btn-ghost" id="btn-back-dash">${renderIcon('arrow-left')} Dashboard</button>
         </div>
       </div>
 
@@ -24,7 +24,7 @@ export async function renderAIChatPage(userProfile) {
         <div id="ai-chat-history" style="flex: 1; overflow-y: auto; padding: var(--space-lg); display: flex; flex-direction: column; gap: var(--space-md)">
           ${conversationHistory.length === 0 ? `
             <div class="empty-state" style="margin: auto">
-              <div class="empty-icon" style="font-size:3rem">🤖</div>
+              <div class="empty-icon" style="font-size:3rem">${renderIcon('bot', 'ai-hero-icon')}</div>
               <h3>How can I help you today?</h3>
               <p>Ask about video ideas, scripts, or SEO strategies.</p>
             </div>
@@ -44,11 +44,11 @@ export async function renderAIChatPage(userProfile) {
           <div style="display:flex; gap:var(--space-md); align-items: flex-end; position:relative">
             <div style="flex:1; position:relative">
               <textarea id="chat-input" class="form-textarea" placeholder="Type your message here... (Shift+Enter for new line)" style="min-height:50px; max-height:150px; padding-left:45px; padding-top:14px; border-radius:var(--radius-lg)"></textarea>
-              <button class="btn-icon" id="btn-chat-attach" style="position:absolute; left:12px; bottom:12px; opacity:0.7; font-size:1.4rem" title="Attach image/file">📎</button>
+              <button class="btn-icon" id="btn-chat-attach" style="position:absolute; left:12px; bottom:12px; opacity:0.7; font-size:1.4rem" title="Attach image/file">${renderIcon('paperclip')}</button>
               <input type="file" id="chat-file-input" class="hidden" accept="image/*,application/pdf" />
             </div>
             <button class="btn btn-primary" id="btn-chat-send" style="height:50px; width:50px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0">
-              <span style="font-size:1.5rem; transform:rotate(45deg); margin-left:-2px; margin-top:-2px">🚀</span>
+              <span style="display:flex; align-items:center; justify-content:center">${renderIcon('send')}</span>
             </button>
           </div>
         </div>
@@ -82,8 +82,8 @@ function initChatEvents() {
         chatAttachments = [base64];
         previewContainer.innerHTML = `
           <div class="attachment-card" style="display:inline-flex; align-items:center; gap:8px; background:var(--bg-secondary); padding:6px 12px; border-radius:var(--radius-md); border:1px solid var(--primary-glow); font-size:var(--font-xs)">
-            <span>📎 ${file.name}</span>
-            <span style="color:var(--danger); cursor:pointer; font-weight:bold" id="btn-remove-chat-att">×</span>
+            <span>${renderIcon('paperclip', 'meta-icon')} ${file.name}</span>
+            <span style="color:var(--danger); cursor:pointer; font-weight:bold" id="btn-remove-chat-att">${renderIcon('x', 'meta-icon')}</span>
           </div>
         `;
         previewContainer.classList.remove('hidden');

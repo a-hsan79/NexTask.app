@@ -4,7 +4,7 @@
 
 import { TeamService } from '../services/team.js';
 import { hasPermission, getRoleDisplayName, getRoleBadgeClass } from '../utils/permissions.js';
-import { getInitials, getAvatarColor, showToast, sanitize, showConfirmModal } from '../utils/helpers.js';
+import { getInitials, getAvatarColor, showToast, sanitize, showConfirmModal, renderIcon } from '../utils/helpers.js';
 
 let allMembers = [];
 let currentUserProfile = null;
@@ -19,7 +19,7 @@ export async function renderTeamPage(userProfile) {
     <div class="fade-in">
       <div class="page-header">
         <div>
-          <h1>👥 Team Management</h1>
+          <h1>${renderIcon('users')} Team Management</h1>
           <p class="subtitle">Manage your team members and their roles</p>
         </div>
       </div>
@@ -28,28 +28,28 @@ export async function renderTeamPage(userProfile) {
       <div class="filter-bar" style="margin-bottom:var(--space-lg)">
         <div class="filter-chips">
           <button class="filter-chip active" data-tab="all">All Team</button>
-          ${isAdmin ? `<button class="filter-chip" data-tab="pending">⏳ Pending Approval <span class="badge badge-primary hidden" id="pending-count-badge">0</span></button>` : ''}
+          ${isAdmin ? `<button class="filter-chip" data-tab="pending">${renderIcon('user-plus', 'inline-icon')} Pending Approval <span class="badge badge-primary hidden" id="pending-count-badge">0</span></button>` : ''}
         </div>
       </div>
 
       <!-- Team Stats -->
       <div class="dashboard-stats">
         <div class="stat-card purple">
-          <div class="stat-icon">👥</div>
+          <div class="stat-icon">${renderIcon('users')}</div>
           <div class="stat-info">
             <div class="stat-label">Total Members</div>
             <div class="stat-value" id="team-total">—</div>
           </div>
         </div>
         <div class="stat-card teal">
-          <div class="stat-icon">🏢</div>
+          <div class="stat-icon">${renderIcon('building-2')}</div>
           <div class="stat-info">
             <div class="stat-label">Office</div>
             <div class="stat-value" id="team-office">—</div>
           </div>
         </div>
         <div class="stat-card blue">
-          <div class="stat-icon">🌍</div>
+          <div class="stat-icon">${renderIcon('globe')}</div>
           <div class="stat-info">
             <div class="stat-label">Remote</div>
             <div class="stat-value" id="team-remote">—</div>
@@ -70,7 +70,7 @@ export async function renderTeamPage(userProfile) {
       <div class="modal">
         <div class="modal-header">
           <h2>Edit Team Member</h2>
-          <button class="modal-close" id="member-modal-close">✕</button>
+          <button class="modal-close" id="member-modal-close">${renderIcon('x')}</button>
         </div>
         <form id="member-form">
           <!-- Visual Avatar Upload -->
@@ -86,10 +86,10 @@ export async function renderTeamPage(userProfile) {
             
             <div class="avatar-controls">
               <button type="button" class="avatar-control-btn" id="btn-preview-avatar" title="View Fullscreen">
-                👁️ Preview
+                ${renderIcon('eye')} Preview
               </button>
               <button type="button" class="avatar-control-btn btn-danger-soft" id="btn-remove-avatar" title="Remove Photo">
-                🗑️ Remove
+                ${renderIcon('trash-2')} Remove
               </button>
             </div>
           </div>
@@ -102,19 +102,19 @@ export async function renderTeamPage(userProfile) {
             <div class="form-group">
               <label class="form-label">Role</label>
               <select class="form-select" id="member-role" ${!canManageRoles ? 'disabled' : ''}>
-                <option value="owner">👑 Owner</option>
-                <option value="admin">🛡️ Admin</option>
-                <option value="manager">📊 Manager</option>
-                <option value="editor">✂️ Editor</option>
-                <option value="designer">🎨 Designer</option>
-                <option value="writer">✍️ Writer</option>
+                <option value="owner">Owner</option>
+                <option value="admin">Admin</option>
+                <option value="manager">Manager</option>
+                <option value="editor">Editor</option>
+                <option value="designer">Designer</option>
+                <option value="writer">Writer</option>
               </select>
             </div>
             <div class="form-group">
               <label class="form-label">Work Mode</label>
               <select class="form-select" id="member-remote">
-                <option value="false">🏢 Office</option>
-                <option value="true">🌍 Remote</option>
+                <option value="false">Office</option>
+                <option value="true">Remote</option>
               </select>
             </div>
           </div>
@@ -167,7 +167,7 @@ function renderTeamGrid(members) {
   if (!members.length) {
     grid.innerHTML = `
       <div class="empty-state" style="grid-column:1/-1">
-        <div class="empty-icon">👥</div>
+        <div class="empty-icon">${renderIcon('users')}</div>
         <h3>No team members yet</h3>
         <p>Team members will appear here when they sign up.</p>
       </div>
@@ -190,19 +190,19 @@ function renderTeamGrid(members) {
           <div style="font-weight:600;font-size:var(--font-lg)">${sanitize(member.full_name)}</div>
           <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
             <span class="badge ${getRoleBadgeClass(member.role)}">${getRoleDisplayName(member.role)}</span>
-            <span style="font-size:var(--font-xs);color:var(--text-muted)">${member.is_remote ? '🌍 Remote' : '🏢 Office'}</span>
+            <span style="font-size:var(--font-xs);color:var(--text-muted)">${member.is_remote ? renderIcon('globe', 'meta-icon') + ' Remote' : renderIcon('building-2', 'meta-icon') + ' Office'}</span>
           </div>
         </div>
         ${isAdmin ? `
           <div style="display:flex;gap:4px">
-            <button class="btn btn-ghost btn-icon" data-edit-member="${member.id}" title="Edit">✏️</button>
-            <button class="btn btn-ghost btn-icon" data-remove-member="${member.id}" title="Remove">🗑️</button>
+            <button class="btn btn-ghost btn-icon" data-edit-member="${member.id}" title="Edit">${renderIcon('edit-3')}</button>
+            <button class="btn btn-ghost btn-icon" data-remove-member="${member.id}" title="Remove">${renderIcon('trash-2')}</button>
           </div>
         ` : ''}
       </div>
       <div style="font-size:var(--font-sm);color:var(--text-secondary)">
-        ${member.email ? `<div style="margin-bottom:4px">📧 ${sanitize(member.email)}</div>` : ''}
-        ${member.phone ? `<div>📱 ${sanitize(member.phone)}</div>` : ''}
+        ${member.email ? `<div style="margin-bottom:4px">${renderIcon('mail', 'meta-icon')} ${sanitize(member.email)}</div>` : ''}
+        ${member.phone ? `<div>${renderIcon('phone', 'meta-icon')} ${sanitize(member.phone)}</div>` : ''}
       </div>
     </div>
   `).join('');
@@ -283,7 +283,7 @@ function initTeamEvents(userProfile) {
       const url = bg.replace(/^url\(["']?/, '').replace(/["']?\)$/, '');
       window.showLightbox(url);
     } else {
-      showToast('No photo to preview 📸', 'info');
+      showToast('No photo to preview', 'info');
     }
   });
 
@@ -384,7 +384,7 @@ async function saveMember(userProfile) {
     }
 
     await TeamService.updateMember(memberId, updates);
-    showToast('Member updated! ✅', 'success');
+    showToast('Member updated! 🎉', 'success');
     closeMemberModal();
     await loadTeamData();
   } catch (err) {
@@ -415,7 +415,7 @@ function renderPendingGrid(pending) {
   if (!pending.length) {
     grid.innerHTML = `
       <div class="empty-state" style="grid-column:1/-1">
-        <div class="empty-icon">⏳</div>
+        <div class="empty-icon">${renderIcon('clock')}</div>
         <h3>No pending approvals</h3>
         <p>New signups awaiting confirmation will appear here.</p>
       </div>
@@ -434,16 +434,16 @@ function renderPendingGrid(pending) {
         `}
         <div style="flex:1">
           <div style="font-weight:600;font-size:var(--font-lg)">${sanitize(user.full_name)}</div>
-          <div style="font-size:var(--font-xs);color:var(--primary);margin-top:4px">⏳ Awaiting Approval</div>
+          <div style="font-size:var(--font-xs);color:var(--primary);margin-top:4px">${renderIcon('clock', 'meta-icon')} Awaiting Approval</div>
         </div>
       </div>
       <div style="font-size:var(--font-sm);color:var(--text-secondary);margin-bottom:var(--space-md)">
-        <div style="margin-bottom:4px">📧 ${sanitize(user.email)}</div>
-        <div>📅 Joined ${new Date(user.created_at).toLocaleDateString()}</div>
+        <div style="margin-bottom:4px">${renderIcon('mail', 'meta-icon')} ${sanitize(user.email)}</div>
+        <div>${renderIcon('calendar', 'meta-icon')} Joined ${new Date(user.created_at).toLocaleDateString()}</div>
       </div>
       <div style="display:flex;gap:var(--space-sm)">
-        <button class="btn btn-primary btn-sm" style="flex:1" data-approve="${user.id}">✅ Approve</button>
-        <button class="btn btn-secondary btn-sm" style="flex:1" data-reject="${user.id}">✕ Reject</button>
+        <button class="btn btn-primary btn-sm" style="flex:1" data-approve="${user.id}">${renderIcon('check')} Approve</button>
+        <button class="btn btn-secondary btn-sm" style="flex:1" data-reject="${user.id}">${renderIcon('x')} Reject</button>
       </div>
     </div>
   `).join('');

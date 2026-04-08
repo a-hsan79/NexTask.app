@@ -1,24 +1,24 @@
 import { TasksService } from '../services/tasks.js';
 import { TeamService } from '../services/team.js';
 import { hasPermission } from '../utils/permissions.js';
-import { getInitials, getAvatarColor, showToast, sanitize, timeAgo, formatDate, debounce, showConfirmModal } from '../utils/helpers.js';
+import { getInitials, getAvatarColor, showToast, sanitize, timeAgo, formatDate, debounce, showConfirmModal, renderIcon } from '../utils/helpers.js';
 import { addSubscription } from '../app.js';
 
 let allTasks = [];
 let teamMembers = [];
 
 const TASK_STATUSES = {
-  pending:     { label: 'Pending',     icon: '⏳', class: 'badge-info' },
-  in_progress: { label: 'In Progress', icon: '🔄', class: 'badge-warning' },
-  review:      { label: 'In Review',   icon: '👁️', class: 'badge-primary' },
-  completed:   { label: 'Completed',   icon: '✅', class: 'badge-success' },
-  done:        { label: 'Done',        icon: '✅', class: 'badge-success' }
+  pending:     { label: 'Pending',     icon: renderIcon('clock'), class: 'badge-info' },
+  in_progress: { label: 'In Progress', icon: renderIcon('refresh-cw'), class: 'badge-warning' },
+  review:      { label: 'In Review',   icon: renderIcon('eye'), class: 'badge-primary' },
+  completed:   { label: 'Completed',   icon: renderIcon('check-circle'), class: 'badge-success' },
+  done:        { label: 'Done',        icon: renderIcon('check-circle'), class: 'badge-success' }
 };
 
 const PRIORITY_INFO = {
-  low:    { label: 'Low',    icon: '🔵', class: 'priority-low' },
-  medium: { label: 'Medium', icon: '🟡', class: 'priority-medium' },
-  high:   { label: 'High',   icon: '🔴', class: 'priority-high' }
+  low:    { label: 'Low',    icon: renderIcon('chevron-down'), class: 'priority-low' },
+  medium: { label: 'Medium', icon: renderIcon('minus'), class: 'priority-medium' },
+  high:   { label: 'High',   icon: renderIcon('chevron-up'), class: 'priority-high' }
 };
 
 export async function renderTasksPage(userProfile) {
@@ -30,44 +30,44 @@ export async function renderTasksPage(userProfile) {
     <div class="fade-in">
       <div class="page-header">
         <div>
-          <h1>📋 General Tasks</h1>
+          <h1>${renderIcon('clipboard-list')} General Tasks</h1>
           <p class="subtitle">Manage general office tasks and assignments</p>
         </div>
-        ${canCreate ? `<button class="btn btn-primary" id="btn-new-task">+ New Task</button>` : ''}
+        ${canCreate ? `<button class="btn btn-primary" id="btn-new-task">${renderIcon('plus')} New Task</button>` : ''}
       </div>
 
       <!-- Stats -->
       <div class="dashboard-stats">
         <div class="stat-card blue">
-          <div class="stat-icon">📋</div>
+          <div class="stat-icon">${renderIcon('clipboard-list')}</div>
           <div class="stat-info">
             <div class="stat-label">Total Tasks</div>
             <div class="stat-value" id="tasks-count-total">—</div>
           </div>
         </div>
         <div class="stat-card orange clickable" data-tfilter="active">
-          <div class="stat-icon">🔄</div>
+          <div class="stat-icon">${renderIcon('refresh-cw')}</div>
           <div class="stat-info">
             <div class="stat-label">In Progress</div>
             <div class="stat-value" id="tasks-count-active">—</div>
           </div>
         </div>
         <div class="stat-card pink clickable" data-tfilter="unassigned" id="tasks-stat-unassigned" style="display:none">
-          <div class="stat-icon">👤</div>
+          <div class="stat-icon">${renderIcon('user-minus')}</div>
           <div class="stat-info">
             <div class="stat-label">Unassigned</div>
             <div class="stat-value" id="tasks-count-unassigned">—</div>
           </div>
         </div>
         <div class="stat-card indigo clickable" data-tfilter="assigned">
-          <div class="stat-icon">📋</div>
+          <div class="stat-icon">${renderIcon('user-check')}</div>
           <div class="stat-info">
             <div class="stat-label">Assigned</div>
             <div class="stat-value" id="tasks-count-assigned">—</div>
           </div>
         </div>
         <div class="stat-card teal clickable" data-tfilter="done">
-          <div class="stat-icon">✅</div>
+          <div class="stat-icon">${renderIcon('check-circle')}</div>
           <div class="stat-info">
             <div class="stat-label">Done Tasks</div>
             <div class="stat-value" id="tasks-count-done">—</div>
@@ -78,16 +78,16 @@ export async function renderTasksPage(userProfile) {
       <!-- Filters -->
       <div class="filter-bar">
         <div class="search-box" style="flex:1;max-width:400px">
-          <span class="search-icon">🔍</span>
+          <span class="search-icon">${renderIcon('search')}</span>
           <input type="text" id="task-search" placeholder="Search tasks..." />
         </div>
         <div class="filter-chips">
           <button class="filter-chip active" data-status="all">All</button>
-          <button class="filter-chip" data-status="pending">⏳ Pending</button>
-          <button class="filter-chip" data-status="in_progress">🔄 Active</button>
-          <button class="filter-chip" data-status="completed">✅ Completed</button>
-          <button class="filter-chip" data-status="done">✅ Done</button>
-          <button class="filter-chip" data-status="archived">📜 Archived</button>
+          <button class="filter-chip" data-status="pending">Pending</button>
+          <button class="filter-chip" data-status="in_progress">Active</button>
+          <button class="filter-chip" data-status="completed">Completed</button>
+          <button class="filter-chip" data-status="done">Done</button>
+          <button class="filter-chip" data-status="archived">History</button>
         </div>
       </div>
 
@@ -102,7 +102,7 @@ export async function renderTasksPage(userProfile) {
       <div class="modal" style="max-width:500px">
         <div class="modal-header">
           <h2 id="task-modal-title">New Task</h2>
-          <button class="modal-close" id="task-modal-close">✕</button>
+          <button class="modal-close" id="task-modal-close">${renderIcon('x')}</button>
         </div>
         <form id="task-form">
           <div class="form-group">
@@ -117,19 +117,19 @@ export async function renderTasksPage(userProfile) {
             <div class="form-group">
               <label class="form-label">Priority</label>
               <select class="form-select" id="task-priority">
-                <option value="low">🔵 Low</option>
-                <option value="medium" selected>🟡 Medium</option>
-                <option value="high">🔴 High</option>
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
               </select>
             </div>
             <div class="form-group">
               <label class="form-label">Status</label>
               <select class="form-select" id="task-status">
-                <option value="pending">⏳ Pending</option>
-                <option value="in_progress">🔄 In Progress</option>
-                <option value="review">👁️ In Review</option>
-                <option value="completed">✅ Completed</option>
-                <option value="done">✅ Done</option>
+                <option value="pending">Pending</option>
+                <option value="in_progress">In Progress</option>
+                <option value="review">In Review</option>
+                <option value="completed">Completed</option>
+                <option value="done">Done</option>
               </select>
             </div>
           </div>
@@ -144,7 +144,7 @@ export async function renderTasksPage(userProfile) {
             </div>
           </div>
           <div class="form-group">
-            <label class="form-label">🔗 Result / Work Link</label>
+            <label class="form-label">${renderIcon('link')} Result / Work Link</label>
             <input type="url" class="form-input" id="task-result" placeholder="Link to completed work..." />
           </div>
           <input type="hidden" id="task-edit-id" />
@@ -222,7 +222,7 @@ function renderTasksList(tasks, userProfile) {
   if (!tasks.length) {
     container.innerHTML = `
       <div class="empty-state">
-        <div class="empty-icon">📋</div>
+        <div class="empty-icon">${renderIcon('clipboard')}</div>
         <h3>No tasks found</h3>
         <p>Try changing your filters or create a new task!</p>
       </div>
@@ -254,22 +254,22 @@ function renderTasksList(tasks, userProfile) {
                     ${assignee.full_name}
                   </span>
                 ` : ''}
-                ${task.due_date ? `<span>⏰ ${formatDate(task.due_date)}</span>` : ''}
-                <span>📅 ${timeAgo(task.created_at)}</span>
+                ${task.due_date ? `<span>${renderIcon('calendar', 'meta-icon')} ${formatDate(task.due_date)}</span>` : ''}
+                <span>${renderIcon('clock', 'meta-icon')} ${timeAgo(task.created_at)}</span>
               </div>
             </div>
           </div>
           <div class="item-card-actions">
-            ${!task.is_archived && canDelete ? `<button class="btn btn-ghost btn-sm" data-archive-task="${task.id}" title="Move to History">📜</button>` : ''}
-            ${task.is_archived && canDelete ? `<button class="btn btn-ghost btn-sm" data-restore-task="${task.id}" title="Restore from History">↩️</button>` : ''}
-            ${canEditItem ? `<button class="btn btn-ghost btn-sm" data-edit-task="${task.id}">✏️</button>` : ''}
-            ${canDelete ? `<button class="btn btn-ghost btn-sm" data-delete-task="${task.id}">🗑️</button>` : ''}
+            ${!task.is_archived && canDelete ? `<button class="btn btn-ghost btn-sm" data-archive-task="${task.id}" title="Move to History">${renderIcon('history')}</button>` : ''}
+            ${task.is_archived && canDelete ? `<button class="btn btn-ghost btn-sm" data-restore-task="${task.id}" title="Restore from History">${renderIcon('rotate-ccw')}</button>` : ''}
+            ${canEditItem ? `<button class="btn btn-ghost btn-sm" data-edit-task="${task.id}">${renderIcon('edit-3')}</button>` : ''}
+            ${canDelete ? `<button class="btn btn-ghost btn-sm" data-delete-task="${task.id}">${renderIcon('trash-2')}</button>` : ''}
           </div>
         </div>
         ${task.description ? `<p class="item-card-desc">${sanitize(task.description)}</p>` : ''}
         ${task.result_link ? `
           <div style="margin-top:var(--space-sm);padding-top:var(--space-sm);border-top:1px dashed var(--border-color)">
-            <a href="${sanitize(task.result_link)}" target="_blank" class="btn btn-ghost btn-sm" style="color:var(--primary);font-size:var(--font-xs)">🔗 View Result / Work ↗</a>
+            <a href="${sanitize(task.result_link)}" target="_blank" class="btn btn-ghost btn-sm" style="color:var(--primary);font-size:var(--font-xs)">${renderIcon('external-link')} View Result / Work</a>
           </div>
         ` : ''}
       </div>
@@ -365,7 +365,6 @@ function openNewTask() {
 
 function populateAssignDropdown(selectedId = '') {
   const select = document.getElementById('task-assign');
-  if (!select) return;
   if (!select) return;
   select.innerHTML = `<option value="">— Unassigned —</option>` +
     teamMembers.map(m => `<option value="${m.id}" ${m.id === selectedId ? 'selected' : ''}>${m.full_name}</option>`).join('');
@@ -477,10 +476,10 @@ function initTaskSelectionSystem(container, userProfile) {
   bar.className = 'bulk-action-bar';
   bar.innerHTML = `
     <span class="bulk-count" id="bulk-count">0 selected</span>
-    <button class="btn btn-secondary btn-sm" id="bulk-select-all">\u2611 Select All</button>
-    <button class="btn btn-secondary btn-sm" id="bulk-deselect">\u2716 Clear</button>
-    <button class="btn btn-primary btn-sm" id="bulk-archive" style="background:var(--primary);border-color:var(--primary)">📜 Move to History</button>
-    <button class="btn btn-primary btn-sm" id="bulk-delete" style="background:var(--danger,#e74c3c);border-color:var(--danger,#e74c3c)">\ud83d\uddd1\ufe0f Delete Selected</button>
+    <button class="btn btn-secondary btn-sm" id="bulk-select-all">${renderIcon('check-square')} Select All</button>
+    <button class="btn btn-secondary btn-sm" id="bulk-deselect">${renderIcon('x')} Clear</button>
+    <button class="btn btn-primary btn-sm" id="bulk-archive" style="background:var(--primary);border-color:var(--primary)">${renderIcon('history')} Move to History</button>
+    <button class="btn btn-primary btn-sm" id="bulk-delete" style="background:var(--danger,#e74c3c);border-color:var(--danger,#e74c3c)">${renderIcon('trash-2')} Delete Selected</button>
   `;
   document.body.appendChild(bar);
   

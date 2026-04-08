@@ -3,7 +3,7 @@
 // ===========================
 
 import { AuthService } from '../services/auth.js';
-import { sanitize } from '../utils/helpers.js';
+import { sanitize, renderIcon } from '../utils/helpers.js';
 
 export function renderLoginPage() {
   const app = document.getElementById('app');
@@ -50,7 +50,7 @@ export function renderLoginPage() {
                   autocomplete="current-password"
                 />
                 <button type="button" class="password-toggle" id="toggle-password" aria-label="Toggle password visibility">
-                  👁️
+                  ${renderIcon('eye')}
                 </button>
               </div>
             </div>
@@ -81,7 +81,7 @@ function initLoginEvents() {
   togglePassword.addEventListener('click', () => {
     const isPassword = passwordInput.type === 'password';
     passwordInput.type = isPassword ? 'text' : 'password';
-    togglePassword.textContent = isPassword ? '🙈' : '👁️';
+    togglePassword.innerHTML = isPassword ? renderIcon('eye-off') : renderIcon('eye');
   });
 
   // Form submit
@@ -143,8 +143,8 @@ function initLoginEvents() {
     if (message.includes('Invalid login')) return 'Invalid email or password. Please try again.';
     if (message.includes('already registered')) return 'This email is already registered. Try signing in.';
     if (message.includes('rate limit')) return 'Too many attempts. Please wait and try again.';
-    if (message.includes('pending approval')) return '⏳ Your account is awaiting Admin/Owner approval. You will be able to sign in once they confirm your account.';
-    if (message.includes('Email not confirmed')) return '📧 Please confirm your email address before signing in.';
+    if (message.includes('pending approval')) return `${renderIcon('clock', 'inline-icon')} Your account is awaiting Admin/Owner approval. You will be able to sign in once they confirm your account.`;
+    if (message.includes('Email not confirmed')) return `${renderIcon('mail', 'inline-icon')} Please confirm your email address before signing in.`;
     return message || 'Something went wrong. Please try again.';
   }
 }

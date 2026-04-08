@@ -5,7 +5,7 @@
 import { ProjectsService } from '../services/projects.js';
 import { TeamService } from '../services/team.js';
 import { hasPermission } from '../utils/permissions.js';
-import { formatCurrency, getInitials, getAvatarColor, showToast, sanitize, timeAgo, formatDate, debounce, showConfirmModal } from '../utils/helpers.js';
+import { formatCurrency, getInitials, getAvatarColor, showToast, sanitize, timeAgo, formatDate, debounce, showConfirmModal, renderIcon } from '../utils/helpers.js';
 import { addSubscription, clearSubscriptions } from '../app.js';
 
 let allProjects = [];
@@ -23,7 +23,7 @@ function getOrderModalHTML() {
       <div class="modal" style="max-width:580px">
         <div class="modal-header">
           <h2 id="order-modal-title">Add Order</h2>
-          <button class="modal-close" id="order-modal-close">✕</button>
+          <button class="modal-close" id="order-modal-close">${renderIcon('x')}</button>
         </div>
         <form id="order-form">
           <div class="form-group">
@@ -32,26 +32,26 @@ function getOrderModalHTML() {
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md)">
             <div class="form-group">
-              <label class="form-label">📝 Brief / Requirements Link</label>
+              <label class="form-label">${renderIcon('file-text')} Brief / Requirements Link</label>
               <input type="url" class="form-input" id="ord-brief" placeholder="Google Docs / Notion link" />
             </div>
             <div class="form-group">
-              <label class="form-label">🖼️ Thumbnail Link</label>
+              <label class="form-label">${renderIcon('image')} Thumbnail Link</label>
               <input type="url" class="form-input" id="ord-design" placeholder="Thumbnail URL" />
             </div>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md)">
             <div class="form-group">
-              <label class="form-label">📝 Script Link</label>
+              <label class="form-label">${renderIcon('align-left')} Script Link</label>
               <input type="url" class="form-input" id="ord-script" placeholder="Google Docs / Notion link" />
             </div>
             <div class="form-group">
-              <label class="form-label">🎵 Voiceover Link</label>
+              <label class="form-label">${renderIcon('mic')} Voiceover Link</label>
               <input type="url" class="form-input" id="ord-voiceover" placeholder="Drive / Dropbox link" />
             </div>
           </div>
           <div class="form-group">
-            <label class="form-label">📦 Deliverable Link</label>
+            <label class="form-label">${renderIcon('package')} Deliverable Link</label>
             <input type="url" class="form-input" id="ord-deliverable" placeholder="Final deliverable link" />
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md)">
@@ -106,13 +106,13 @@ function getOrderModalHTML() {
 }
 
 const ORDER_STATUSES = {
-  new:         { label: 'New',        icon: '🆕', class: 'badge-info' },
-  in_progress: { label: 'In Progress',icon: '🔄', class: 'badge-warning' },
-  delivered:   { label: 'Delivered',  icon: '📦', class: 'badge-primary' },
-  completed:   { label: 'Completed', icon: '✅', class: 'badge-success' },
-  revision:    { label: 'Revision',   icon: '🔁', class: 'badge-warning' },
-  cancelled:   { label: 'Cancelled', icon: '❌', class: 'badge-danger' },
-  done:        { label: 'Done',      icon: '✅', class: 'badge-success' }
+  new:         { label: 'New',        icon: renderIcon('plus-circle'), class: 'badge-info' },
+  in_progress: { label: 'In Progress',icon: renderIcon('refresh-cw'), class: 'badge-warning' },
+  delivered:   { label: 'Delivered',  icon: renderIcon('package'), class: 'badge-primary' },
+  completed:   { label: 'Completed', icon: renderIcon('check-circle'), class: 'badge-success' },
+  revision:    { label: 'Revision',   icon: renderIcon('rotate-ccw'), class: 'badge-warning' },
+  cancelled:   { label: 'Cancelled', icon: renderIcon('x-circle'), class: 'badge-danger' },
+  done:        { label: 'Done',      icon: renderIcon('check-circle'), class: 'badge-success' }
 };
 
 const PLATFORM_INFO = {
@@ -146,62 +146,62 @@ async function renderProjectsList(userProfile) {
           <h1>💼 Freelance Orders</h1>
           <p class="subtitle">Manage Fiverr, Upwork & direct client projects</p>
         </div>
-        ${canCreate ? `<button class="btn btn-primary" id="btn-new-project">+ New Project</button>` : ''}
+        ${canCreate ? `<button class="btn btn-primary" id="btn-new-project">${renderIcon('plus')} New Project</button>` : ''}
       </div>
 
       <!-- Stats -->
       <div class="dashboard-stats">
         <div class="stat-card purple clickable stagger-1" id="stat-fl-projects">
-          <div class="stat-icon">📁</div>
+          <div class="stat-icon">${renderIcon('folder')}</div>
           <div class="stat-info">
             <div class="stat-label">Projects</div>
             <div class="stat-value" id="fl-projects-count">—</div>
           </div>
         </div>
         <div class="stat-card blue clickable stagger-2" id="stat-fl-total">
-          <div class="stat-icon">📦</div>
+          <div class="stat-icon">${renderIcon('package')}</div>
           <div class="stat-info">
             <div class="stat-label">Total Orders</div>
             <div class="stat-value" id="fl-orders-count">—</div>
           </div>
         </div>
         <div class="stat-card orange clickable stagger-3" id="stat-fl-active">
-          <div class="stat-icon">🔄</div>
+          <div class="stat-icon">${renderIcon('refresh-cw')}</div>
           <div class="stat-info">
             <div class="stat-label">Active</div>
             <div class="stat-value" id="fl-active">—</div>
           </div>
         </div>
         <div class="stat-card sky clickable stagger-4" id="stat-fl-delivered">
-          <div class="stat-icon">📦</div>
+          <div class="stat-icon">${renderIcon('truck')}</div>
           <div class="stat-info">
             <div class="stat-label">Delivered</div>
             <div class="stat-value" id="fl-delivered">—</div>
           </div>
         </div>
         <div class="stat-card green clickable stagger-5" id="stat-fl-revenue">
-          <div class="stat-icon">💰</div>
+          <div class="stat-icon">${renderIcon('dollar-sign')}</div>
           <div class="stat-info">
             <div class="stat-label">Revenue</div>
             <div class="stat-value" id="fl-revenue">—</div>
           </div>
         </div>
         <div class="stat-card pink clickable stagger-6" id="stat-fl-unassigned" style="display:none">
-          <div class="stat-icon">👤</div>
+          <div class="stat-icon">${renderIcon('user-minus')}</div>
           <div class="stat-info">
             <div class="stat-label">Unassigned</div>
             <div class="stat-value" id="fl-unassigned">—</div>
           </div>
         </div>
         <div class="stat-card indigo clickable stagger-7" id="stat-fl-assigned">
-          <div class="stat-icon">🔄</div>
+          <div class="stat-icon">${renderIcon('user-check')}</div>
           <div class="stat-info">
             <div class="stat-label">Assigned</div>
             <div class="stat-value" id="fl-assigned">—</div>
           </div>
         </div>
         <div class="stat-card teal clickable stagger-8" id="stat-fl-done">
-          <div class="stat-icon">✅</div>
+          <div class="stat-icon">${renderIcon('check-circle')}</div>
           <div class="stat-info">
             <div class="stat-label">Done Orders</div>
             <div class="stat-value" id="fl-done">—</div>
@@ -212,14 +212,14 @@ async function renderProjectsList(userProfile) {
       <!-- Filters -->
       <div class="filter-bar">
         <div class="search-box" style="flex:1;max-width:400px">
-          <span class="search-icon">🔍</span>
+          <span class="search-icon">${renderIcon('search')}</span>
           <input type="text" id="project-search" placeholder="Search projects..." />
         </div>
         <div class="filter-chips">
           <button class="filter-chip active" data-plat="all">All</button>
-          <button class="filter-chip" data-plat="fiverr">🟢 Fiverr</button>
-          <button class="filter-chip" data-plat="upwork">🟩 Upwork</button>
-          <button class="filter-chip" data-plat="direct">🔵 Direct</button>
+          <button class="filter-chip" data-plat="fiverr">Fiverr</button>
+          <button class="filter-chip" data-plat="upwork">Upwork</button>
+          <button class="filter-chip" data-plat="direct">Direct</button>
         </div>
       </div>
 
@@ -235,7 +235,7 @@ async function renderProjectsList(userProfile) {
       <div class="modal">
         <div class="modal-header">
           <h2 id="project-modal-title">New Freelance Project</h2>
-          <button class="modal-close" id="project-modal-close">✕</button>
+          <button class="modal-close" id="project-modal-close">${renderIcon('x')}</button>
         </div>
         <form id="project-form">
           <div class="form-group">
@@ -246,9 +246,9 @@ async function renderProjectsList(userProfile) {
             <div class="form-group">
               <label class="form-label">Platform *</label>
               <select class="form-select" id="proj-platform" required>
-                <option value="fiverr">🟢 Fiverr</option>
-                <option value="upwork">🟩 Upwork</option>
-                <option value="direct">🔵 Direct</option>
+                <option value="fiverr">Fiverr</option>
+                <option value="upwork">Upwork</option>
+                <option value="direct">Direct</option>
               </select>
             </div>
             <div class="form-group">
@@ -328,7 +328,7 @@ async function renderProjectsGrid(projects, userProfile) {
   if (!projects.length) {
     grid.innerHTML = `
       <div class="empty-state" style="grid-column:1/-1">
-        <div class="empty-icon">💼</div>
+        <div class="empty-icon">${renderIcon('briefcase')}</div>
         <h3>No projects yet</h3>
         <p>Create your first freelance project to start tracking orders!</p>
       </div>
@@ -349,14 +349,14 @@ async function renderProjectsGrid(projects, userProfile) {
     return `
       <div class="project-card fade-in stagger-${Math.min(i + 1, 5)}" data-project-id="${proj.id}">
         <div class="project-card-actions">
-          ${canEdit ? `<button class="btn btn-ghost btn-sm" data-edit-project="${proj.id}">✏️</button>` : ''}
-          ${canDelete ? `<button class="btn btn-ghost btn-sm" data-delete-project="${proj.id}">🗑️</button>` : ''}
+          ${canEdit ? `<button class="btn btn-ghost btn-sm" data-edit-project="${proj.id}">${renderIcon('edit-3')}</button>` : ''}
+          ${canDelete ? `<button class="btn btn-ghost btn-sm" data-delete-project="${proj.id}">${renderIcon('trash-2')}</button>` : ''}
         </div>
         <div class="project-card-header">
-          ${counts[i].total > 0 && counts[i].total === counts[i].done ? `<div class="completion-badge clickable" data-open-status="done">✅ DONE</div>` : ''}
-          ${counts[i].delivered > 0 ? `<div class="uploaded-badge clickable" data-open-status="delivered">📦 DELIVERED (${counts[i].delivered})</div>` : ''}
+          ${counts[i].total > 0 && counts[i].total === counts[i].done ? `<div class="completion-badge clickable" data-open-status="done">${renderIcon('check')} DONE</div>` : ''}
+          ${counts[i].delivered > 0 ? `<div class="uploaded-badge clickable" data-open-status="delivered">${renderIcon('package')} DELIVERED (${counts[i].delivered})</div>` : ''}
           <div class="project-card-icon" style="background:rgba(${proj.platform === 'fiverr' ? '27,190,66' : proj.platform === 'upwork' ? '20,163,0' : '116,185,255'},0.15)">
-            ${plat.icon}
+            ${renderIcon(proj.platform === 'fiverr' || proj.platform === 'upwork' ? 'globe' : 'user')}
           </div>
           <div>
             <div class="project-card-title">${sanitize(proj.name)}</div>
@@ -369,7 +369,7 @@ async function renderProjectsGrid(projects, userProfile) {
         ${proj.description ? `<p style="font-size:var(--font-xs);color:var(--text-muted);margin-bottom:var(--space-md)">${sanitize(proj.description).slice(0, 80)}</p>` : ''}
         <div class="project-card-stats">
           <div class="project-card-stat"><strong>${counts[i].total}</strong> Active</div>
-          ${archives[i].length > 0 ? `<div class="project-card-stat clickable" data-open-history="${proj.id}" style="color:var(--primary);cursor:pointer">📜 <strong>${archives[i].length}</strong> History Folders</div>` : ''}
+          ${archives[i].length > 0 ? `<div class="project-card-stat clickable" data-open-history="${proj.id}" style="color:var(--primary);cursor:pointer">${renderIcon('history')} <strong>${archives[i].length}</strong> History Folders</div>` : ''}
           <div class="project-card-stat">Created ${timeAgo(proj.created_at)}</div>
         </div>
       </div>
@@ -539,28 +539,28 @@ async function openProjectOrders(projectId, userProfile, initialStatus = 'all') 
 
       <div class="page-header">
         <div>
-          <h1>${plat.icon} ${sanitize(project.name)}</h1>
+          <h1>${renderIcon(project.platform === 'fiverr' || project.platform === 'upwork' ? 'globe' : 'briefcase')} ${sanitize(project.name)}</h1>
           <p class="subtitle">${project.client_name ? `Client: ${sanitize(project.client_name)} · ` : ''}<span class="badge ${plat.class}">${plat.label}</span></p>
         </div>
         <div style="display:flex;gap:12px;align-items:center">
-          <button class="btn btn-ghost" id="btn-fl-history">📜 Daily History</button>
-          ${canCreate ? `<button class="btn btn-primary" id="btn-new-order">+ Add Order</button>` : ''}
+          <button class="btn btn-ghost" id="btn-fl-history">${renderIcon('history')} Daily History</button>
+          ${canCreate ? `<button class="btn btn-primary" id="btn-new-order">${renderIcon('plus')} Add Order</button>` : ''}
         </div>
       </div>
 
       <!-- Filters -->
       <div class="filter-bar">
         <div class="search-box" style="flex:1;max-width:400px">
-          <span class="search-icon">🔍</span>
+          <span class="search-icon">${renderIcon('search')}</span>
           <input type="text" id="order-search" placeholder="Search orders..." />
         </div>
         <div class="filter-chips">
           <button class="filter-chip active" data-ostatus="all">All</button>
-          <button class="filter-chip" data-ostatus="new">🆕 New</button>
-          <button class="filter-chip" data-ostatus="delivered">📦 Delivered</button>
-          <button class="filter-chip" data-ostatus="completed">✅ Completed</button>
-          <button class="filter-chip" data-ostatus="done">✅ Done</button>
-          <button class="filter-chip" data-ostatus="revision">🔁 Revision</button>
+          <button class="filter-chip" data-ostatus="new">New</button>
+          <button class="filter-chip" data-ostatus="delivered">Delivered</button>
+          <button class="filter-chip" data-ostatus="completed">Completed</button>
+          <button class="filter-chip" data-ostatus="done">Done</button>
+          <button class="filter-chip" data-ostatus="revision">Revision</button>
         </div>
       </div>
 
@@ -615,7 +615,7 @@ function renderOrdersList(orders, userProfile) {
   if (!orders.length) {
     container.innerHTML = `
       <div class="empty-state">
-        <div class="empty-icon">📦</div>
+        <div class="empty-icon">${renderIcon('package')}</div>
         <h3>No orders yet</h3>
         <p>Add your first order to this project!</p>
       </div>
@@ -646,22 +646,22 @@ function renderOrdersList(orders, userProfile) {
                     ${assignee.full_name}
                   </span>
                 ` : ''}
-                ${ord.deadline ? `<span>⏰ ${formatDate(ord.deadline)}</span>` : ''}
-                <span>📅 ${timeAgo(ord.created_at)}</span>
+                ${ord.deadline ? `<span>${renderIcon('calendar', 'meta-icon')} ${formatDate(ord.deadline)}</span>` : ''}
+                <span>${renderIcon('clock', 'meta-icon')} ${timeAgo(ord.created_at)}</span>
               </div>
             </div>
           </div>
           <div style="display:flex;gap:4px">
-            ${canDelete ? `<button class="btn btn-ghost btn-sm" data-archive-order="${ord.id}" title="Move to History">📜</button>` : ''}
-            ${canEditItem ? `<button class="btn btn-ghost btn-sm" data-edit-order="${ord.id}">✏️</button>` : ''}
-            ${canDelete ? `<button class="btn btn-ghost btn-sm" data-delete-order="${ord.id}">🗑️</button>` : ''}
+            ${canDelete ? `<button class="btn btn-ghost btn-sm" data-archive-order="${ord.id}" title="Move to History">${renderIcon('history')}</button>` : ''}
+            ${canEditItem ? `<button class="btn btn-ghost btn-sm" data-edit-order="${ord.id}">${renderIcon('edit-3')}</button>` : ''}
+            ${canDelete ? `<button class="btn btn-ghost btn-sm" data-delete-order="${ord.id}">${renderIcon('trash-2')}</button>` : ''}
           </div>
         </div>
         <div class="link-fields-grid">
-          ${renderLinkField('📝', 'Script', ord.script_link)}
-          ${renderLinkField('🎙️', 'Voiceover', ord.voiceover_link)}
-          ${renderLinkField('🖼️', 'Thumbnail', ord.design_link)}
-          ${renderLinkField('📦', 'Deliverable', ord.deliverable_link)}
+          ${renderLinkField(renderIcon('align-left'), 'Script', ord.script_link)}
+          ${renderLinkField(renderIcon('mic'), 'Voiceover', ord.voiceover_link)}
+          ${renderLinkField(renderIcon('image'), 'Thumbnail', ord.design_link)}
+          ${renderLinkField(renderIcon('package'), 'Deliverable', ord.deliverable_link)}
         </div>
       </div>
     `;

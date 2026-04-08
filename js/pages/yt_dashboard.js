@@ -6,7 +6,7 @@ import { ChannelsService } from '../services/channels.js';
 import { TeamService } from '../services/team.js';
 import { renderAISEOPage } from './ai_seo.js';
 import { hasPermission } from '../utils/permissions.js';
-import { getInitials, getAvatarColor, showToast, sanitize, timeAgo, debounce, showConfirmModal } from '../utils/helpers.js';
+import { getInitials, getAvatarColor, showToast, sanitize, timeAgo, debounce, showConfirmModal, renderIcon } from '../utils/helpers.js';
 import { addSubscription, clearSubscriptions } from '../app.js';
 
 let allChannels = [];
@@ -20,7 +20,7 @@ function getVideoModalHTML() {
       <div class="modal" style="max-width:580px">
         <div class="modal-header">
           <h2 id="video-modal-title">Add Video</h2>
-          <button class="modal-close" id="video-modal-close">✕</button>
+          <button class="modal-close" id="video-modal-close">${renderIcon('x')}</button>
         </div>
         <form id="video-form">
           <div class="form-group">
@@ -29,21 +29,21 @@ function getVideoModalHTML() {
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md)">
             <div class="form-group">
-              <label class="form-label">📝 Script Link</label>
+              <label class="form-label">${renderIcon('align-left')} Script Link</label>
               <input type="url" class="form-input" id="vid-script" placeholder="Google Docs / Notion link" />
             </div>
             <div class="form-group">
-              <label class="form-label">🎙️ Voiceover Link</label>
+              <label class="form-label">${renderIcon('mic')} Voiceover Link</label>
               <input type="url" class="form-input" id="vid-voiceover" placeholder="Drive / Dropbox link" />
             </div>
           </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md)">
               <div class="form-group">
-                <label class="form-label">🖼️ Thumbnail Link</label>
+                <label class="form-label">${renderIcon('image')} Thumbnail Link</label>
                 <input type="url" class="form-input" id="vid-thumbnail" placeholder="Canva / Figma link" />
               </div>
               <div class="form-group">
-                <label class="form-label">🔗 Video / YouTube Link</label>
+                <label class="form-label">${renderIcon('youtube')} Video / YouTube Link</label>
                 <input type="url" class="form-input" id="vid-video" placeholder="YouTube URL" />
               </div>
             </div>
@@ -85,13 +85,13 @@ function getVideoModalHTML() {
             <div class="form-group">
               <label class="form-label">Status</label>
               <select class="form-select" id="vid-status">
-                <option value="draft">📝 Draft</option>
-                <option value="scripting">✍️ Scripting</option>
-                <option value="recording">🎙️ Recording</option>
-                <option value="editing">✂️ Editing</option>
-                <option value="uploaded">☁️ Uploaded</option>
-                <option value="published">🚀 Published</option>
-                <option value="done">✅ Done</option>
+                <option value="draft">Draft</option>
+                <option value="scripting">Scripting</option>
+                <option value="recording">Recording</option>
+                <option value="editing">Editing</option>
+                <option value="uploaded">Uploaded</option>
+                <option value="published">Published</option>
+                <option value="done">Done</option>
               </select>
             </div>
           </div>
@@ -115,13 +115,13 @@ let activeHistoryDate = null;
 let activeHistoryChannelId = null;
 
 const VIDEO_STATUSES = {
-  draft:     { label: 'Draft',     icon: '📝', class: 'status-draft' },
-  scripting: { label: 'Scripting', icon: '✍️', class: 'status-scripting' },
-  recording: { label: 'Recording', icon: '🎙️', class: 'status-recording' },
-  editing:   { label: 'Editing',   icon: '✂️', class: 'status-editing' },
-  uploaded:  { label: 'Uploaded',  icon: '☁️', class: 'status-uploaded' },
-  published: { label: 'Published', icon: '🚀', class: 'status-published' },
-  done:      { label: 'Done',      icon: '✅', class: 'status-done' }
+  draft:     { label: 'Draft',     icon: renderIcon('file-text'), class: 'status-draft' },
+  scripting: { label: 'Scripting', icon: renderIcon('edit-3'), class: 'status-scripting' },
+  recording: { label: 'Recording', icon: renderIcon('mic'), class: 'status-recording' },
+  editing:   { label: 'Editing',   icon: renderIcon('scissors'), class: 'status-editing' },
+  uploaded:  { label: 'Uploaded',  icon: renderIcon('cloud-upload'), class: 'status-uploaded' },
+  published: { label: 'Published', icon: renderIcon('youtube'), class: 'status-published' },
+  done:      { label: 'Done',      icon: renderIcon('check-circle'), class: 'status-done' }
 };
 
 export async function renderYTDashboardPage(userProfile, section = 'automation') {
@@ -151,65 +151,65 @@ async function renderChannelsList(userProfile) {
     <div class="fade-in">
       <div class="page-header">
         <div>
-          <h1>🎬 ${title}</h1>
+          <h1>${renderIcon('clapperboard')} ${title}</h1>
           <p class="subtitle">${subtitle}</p>
         </div>
-        ${canCreate ? `<button class="btn btn-primary" id="btn-new-channel">+ New Channel</button>` : ''}
+        ${canCreate ? `<button class="btn btn-primary" id="btn-new-channel">${renderIcon('plus')} New Channel</button>` : ''}
       </div>
 
       <!-- Stats -->
       <div class="dashboard-stats" id="yt-stats">
         <div class="stat-card purple clickable stagger-1" id="stat-yt-channels">
-          <div class="stat-icon">📺</div>
+          <div class="stat-icon">${renderIcon('tv')}</div>
           <div class="stat-info">
             <div class="stat-label">Channels</div>
             <div class="stat-value" id="yt-channels-count">—</div>
           </div>
         </div>
         <div class="stat-card blue clickable stagger-2" id="stat-yt-total">
-          <div class="stat-icon">🎬</div>
+          <div class="stat-icon">${renderIcon('film')}</div>
           <div class="stat-info">
             <div class="stat-label">Total Videos</div>
             <div class="stat-value" id="yt-videos-count">—</div>
           </div>
         </div>
         <div class="stat-card orange clickable stagger-3" id="stat-yt-progress">
-          <div class="stat-icon">✂️</div>
+          <div class="stat-icon">${renderIcon('scissors')}</div>
           <div class="stat-info">
             <div class="stat-label">In Progress</div>
             <div class="stat-value" id="yt-in-progress">—</div>
           </div>
         </div>
         <div class="stat-card green clickable stagger-4" id="stat-yt-published">
-          <div class="stat-icon">🚀</div>
+          <div class="stat-icon">${renderIcon('rocket')}</div>
           <div class="stat-info">
             <div class="stat-label">Published / Done</div>
             <div class="stat-value" id="yt-published">—</div>
           </div>
         </div>
         <div class="stat-card sky clickable stagger-5" id="stat-yt-uploaded">
-          <div class="stat-icon">☁️</div>
+          <div class="stat-icon">${renderIcon('cloud-upload')}</div>
           <div class="stat-info">
             <div class="stat-label">Uploaded</div>
             <div class="stat-value" id="yt-uploaded">—</div>
           </div>
         </div>
         <div class="stat-card pink clickable stagger-6" id="stat-yt-unassigned" style="display:none">
-          <div class="stat-icon">👤</div>
+          <div class="stat-icon">${renderIcon('user-minus')}</div>
           <div class="stat-info">
             <div class="stat-label">Unassigned</div>
             <div class="stat-value" id="yt-unassigned">—</div>
           </div>
         </div>
         <div class="stat-card indigo clickable stagger-7" id="stat-yt-assigned">
-          <div class="stat-icon">📝</div>
+          <div class="stat-icon">${renderIcon('user-check')}</div>
           <div class="stat-info">
             <div class="stat-label">Assigned</div>
             <div class="stat-value" id="yt-assigned">—</div>
           </div>
         </div>
         <div class="stat-card teal clickable stagger-8" id="stat-yt-done">
-          <div class="stat-icon">✅</div>
+          <div class="stat-icon">${renderIcon('check-circle')}</div>
           <div class="stat-info">
             <div class="stat-label">Done Videos</div>
             <div class="stat-value" id="yt-done">—</div>
@@ -220,7 +220,7 @@ async function renderChannelsList(userProfile) {
       <!-- Search -->
       <div class="filter-bar">
         <div class="search-box" style="flex:1;max-width:400px">
-          <span class="search-icon">🔍</span>
+          <span class="search-icon">${renderIcon('search')}</span>
           <input type="text" id="channel-search" placeholder="Search channels..." />
         </div>
       </div>
@@ -237,7 +237,7 @@ async function renderChannelsList(userProfile) {
       <div class="modal">
         <div class="modal-header">
           <h2 id="channel-modal-title">New YouTube Channel</h2>
-          <button class="modal-close" id="channel-modal-close">✕</button>
+          <button class="modal-close" id="channel-modal-close">${renderIcon('x')}</button>
         </div>
         <form id="channel-form">
           <div class="form-group">
@@ -324,7 +324,7 @@ async function renderChannelsGrid(channels, userProfile) {
   if (!channels.length) {
     grid.innerHTML = `
       <div class="empty-state" style="grid-column:1/-1">
-        <div class="empty-icon">📺</div>
+        <div class="empty-icon">${renderIcon('tv')}</div>
         <h3>No channels yet</h3>
         <p>Add your first YouTube channel to start managing videos!</p>
       </div>
@@ -343,22 +343,22 @@ async function renderChannelsGrid(channels, userProfile) {
   grid.innerHTML = channels.map((ch, i) => `
     <div class="project-card fade-in stagger-${Math.min(i + 1, 5)}" data-channel-id="${ch.id}">
       <div class="project-card-actions">
-        ${canEdit ? `<button class="btn btn-ghost btn-sm" data-edit-channel="${ch.id}" title="Edit">✏️</button>` : ''}
-        ${canDelete ? `<button class="btn btn-ghost btn-sm" data-delete-channel="${ch.id}" title="Delete">🗑️</button>` : ''}
+        ${canEdit ? `<button class="btn btn-ghost btn-sm" data-edit-channel="${ch.id}" title="Edit">${renderIcon('edit-3')}</button>` : ''}
+        ${canDelete ? `<button class="btn btn-ghost btn-sm" data-delete-channel="${ch.id}" title="Delete">${renderIcon('trash-2')}</button>` : ''}
       </div>
       <div class="project-card-header">
-        ${counts[i].total > 0 && counts[i].total === counts[i].done ? `<div class="completion-badge clickable" data-open-status="done">✅ DONE</div>` : ''}
-        ${counts[i].uploaded > 0 ? `<div class="uploaded-badge clickable" data-open-status="uploaded">☁️ UPLOADED (${counts[i].uploaded})</div>` : ''}
-        <div class="project-card-icon">📺</div>
+        ${counts[i].total > 0 && counts[i].total === counts[i].done ? `<div class="completion-badge clickable" data-open-status="done">${renderIcon('check')} DONE</div>` : ''}
+        ${counts[i].uploaded > 0 ? `<div class="uploaded-badge clickable" data-open-status="uploaded">${renderIcon('cloud-upload')} UPLOADED (${counts[i].uploaded})</div>` : ''}
+        <div class="project-card-icon">${renderIcon('youtube')}</div>
         <div>
           <div class="project-card-title">${sanitize(ch.name)}</div>
-          <div class="project-card-subtitle">${ch.url ? `<a href="${sanitize(ch.url)}" target="_blank" style="color:var(--primary)" onclick="event.stopPropagation()">View Channel ↗</a>` : 'No URL added'}</div>
+          <div class="project-card-subtitle">${ch.url ? `<a href="${sanitize(ch.url)}" target="_blank" style="color:var(--primary)" onclick="event.stopPropagation()">View Channel ${renderIcon('external-link', 'inline-icon')}</a>` : 'No URL added'}</div>
         </div>
       </div>
       ${ch.description ? `<p style="font-size:var(--font-xs);color:var(--text-muted);margin-bottom:var(--space-md)">${sanitize(ch.description).slice(0, 80)}</p>` : ''}
       <div class="project-card-stats">
         <div class="project-card-stat"><strong>${counts[i].total}</strong> Active</div>
-        ${archives[i].length > 0 ? `<div class="project-card-stat clickable" data-open-history="${ch.id}" style="color:var(--primary);cursor:pointer">📜 <strong>${archives[i].length}</strong> History Folders</div>` : ''}
+        ${archives[i].length > 0 ? `<div class="project-card-stat clickable" data-open-history="${ch.id}" style="color:var(--primary);cursor:pointer">${renderIcon('history')} <strong>${archives[i].length}</strong> History Folders</div>` : ''}
         <div class="project-card-stat">Created ${timeAgo(ch.created_at)}</div>
       </div>
     </div>
@@ -534,31 +534,31 @@ async function openChannelVideos(channelId, userProfile, initialStatus = 'all') 
 
       <div class="page-header">
         <div>
-          <h1>📺 ${sanitize(channel.name)}</h1>
-          <p class="subtitle">${channel.url ? `<a href="${sanitize(channel.url)}" target="_blank" style="color:var(--primary)">View Channel ↗</a>` : 'YouTube Channel'}</p>
+          <h1>${renderIcon('youtube')} ${sanitize(channel.name)}</h1>
+          <p class="subtitle">${channel.url ? `<a href="${sanitize(channel.url)}" target="_blank" style="color:var(--primary)">View Channel ${renderIcon('external-link', 'inline-icon')}</a>` : 'YouTube Channel'}</p>
         </div>
         <div style="display:flex;gap:12px;align-items:center">
-          <button class="btn btn-ai-studio" id="btn-yt-ai-seo">✨ AI SEO Studio</button>
-          <button class="btn btn-ghost" id="btn-yt-history">📜 Daily History</button>
-          ${canCreate ? `<button class="btn btn-primary" id="btn-new-video">+ Add Video</button>` : ''}
+          <button class="btn btn-ai-studio" id="btn-yt-ai-seo">${renderIcon('sparkles')} AI SEO Studio</button>
+          <button class="btn btn-ghost" id="btn-yt-history">${renderIcon('history')} Daily History</button>
+          ${canCreate ? `<button class="btn btn-primary" id="btn-new-video">${renderIcon('plus')} Add Video</button>` : ''}
         </div>
       </div>
 
       <!-- Filters -->
       <div class="filter-bar">
         <div class="search-box" style="flex:1;max-width:400px">
-          <span class="search-icon">🔍</span>
+          <span class="search-icon">${renderIcon('search')}</span>
           <input type="text" id="video-search" placeholder="Search videos..." />
         </div>
         <div class="filter-chips">
           <button class="filter-chip active" data-vstatus="all">All</button>
-          <button class="filter-chip" data-vstatus="draft">📝 Draft</button>
-          <button class="filter-chip" data-vstatus="scripting">✍️ Script</button>
-          <button class="filter-chip" data-vstatus="recording">🎙️ Record</button>
-          <button class="filter-chip" data-vstatus="editing">✂️ Edit</button>
-          <button class="filter-chip" data-vstatus="uploaded">☁️ Upload</button>
-          <button class="filter-chip" data-vstatus="published">🚀 Live</button>
-          <button class="filter-chip" data-vstatus="done">✅ Done</button>
+          <button class="filter-chip" data-vstatus="draft">Draft</button>
+          <button class="filter-chip" data-vstatus="scripting">Script</button>
+          <button class="filter-chip" data-vstatus="recording">Record</button>
+          <button class="filter-chip" data-vstatus="editing">Edit</button>
+          <button class="filter-chip" data-vstatus="uploaded">Upload</button>
+          <button class="filter-chip" data-vstatus="published">Live</button>
+          <button class="filter-chip" data-vstatus="done">Done</button>
         </div>
       </div>
 
@@ -614,7 +614,7 @@ function renderVideosList(videos, userProfile) {
   if (!videos.length) {
     container.innerHTML = `
       <div class="empty-state">
-        <div class="empty-icon">🎬</div>
+        <div class="empty-icon">${renderIcon('film')}</div>
         <h3>No videos yet</h3>
         <p>Add your first video to this channel!</p>
       </div>
@@ -644,29 +644,29 @@ function renderVideosList(videos, userProfile) {
                     ${assignee.full_name}
                   </span>
                 ` : ''}
-                <span>📅 ${timeAgo(vid.created_at)}</span>
+                <span>${renderIcon('clock', 'meta-icon')} ${timeAgo(vid.created_at)}</span>
               </div>
             </div>
           </div>
           <div style="display:flex;gap:4px">
-            ${canEditItem ? `<button class="btn btn-ghost btn-sm" data-edit-video="${vid.id}">✏️</button>` : ''}
-            ${canDelete ? `<button class="btn btn-ghost btn-sm" data-delete-video="${vid.id}">🗑️</button>` : ''}
+            ${canEditItem ? `<button class="btn btn-ghost btn-sm" data-edit-video="${vid.id}">${renderIcon('edit-3')}</button>` : ''}
+            ${canDelete ? `<button class="btn btn-ghost btn-sm" data-delete-video="${vid.id}">${renderIcon('trash-2')}</button>` : ''}
           </div>
         </div>
         <div class="link-fields-grid">
-          ${renderLinkField('📝', 'Script', vid.script_link)}
-          ${renderLinkField('🎙️', 'Voiceover', vid.voiceover_link)}
-          ${renderLinkField('🖼️', 'Thumbnail', vid.thumbnail_link)}
-          ${renderLinkField('🔗', 'Video', vid.video_link)}
+          ${renderLinkField(renderIcon('align-left'), 'Script', vid.script_link)}
+          ${renderLinkField(renderIcon('mic'), 'Voiceover', vid.voiceover_link)}
+          ${renderLinkField(renderIcon('image'), 'Thumbnail', vid.thumbnail_link)}
+          ${renderLinkField(renderIcon('youtube'), 'Video', vid.video_link)}
         </div>
         ${(vid.script_v2_link || vid.voiceover_v2_link || vid.thumbnail_v2_link || vid.video_v2_link) ? `
         <div style="margin-top:var(--space-md);padding-top:var(--space-sm);border-top:1px dashed var(--border-color)">
           <div style="font-size:var(--font-xs);color:var(--text-muted);margin-bottom:var(--space-xs);font-weight:600">VERSION 2</div>
           <div class="link-fields-grid">
-            ${renderLinkField('📝', 'Script V2', vid.script_v2_link)}
-            ${renderLinkField('🎙️', 'Voiceover V2', vid.voiceover_v2_link)}
-            ${renderLinkField('🖼️', 'Thumbnail V2', vid.thumbnail_v2_link)}
-            ${renderLinkField('🔗', 'Video V2', vid.video_v2_link)}
+            ${renderLinkField(renderIcon('align-left'), 'Script V2', vid.script_v2_link)}
+            ${renderLinkField(renderIcon('mic'), 'Voiceover V2', vid.voiceover_v2_link)}
+            ${renderLinkField(renderIcon('image'), 'Thumbnail V2', vid.thumbnail_v2_link)}
+            ${renderLinkField(renderIcon('youtube'), 'Video V2', vid.video_v2_link)}
           </div>
         </div>
         ` : ''}

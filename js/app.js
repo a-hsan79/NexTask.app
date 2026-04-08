@@ -4,7 +4,7 @@
 
 import { AuthService } from './services/auth.js';
 import { canAccessPage, getRoleDisplayName, hasPermission } from './utils/permissions.js';
-import { getInitials, getAvatarColor, showToast } from './utils/helpers.js';
+import { getInitials, getAvatarColor, showToast, renderIcon } from './utils/helpers.js';
 import { renderLoginPage } from './pages/login.js';
 import { renderDashboardPage } from './pages/dashboard.js';
 import { renderYTDashboardPage } from './pages/yt_dashboard.js';
@@ -162,7 +162,7 @@ function renderAppShell() {
           <div class="sidebar-section">
             <div class="sidebar-section-label">Main</div>
             <a class="sidebar-link active" data-page="dashboard">
-              <span class="link-icon">📊</span>
+              <span class="link-icon">${renderIcon('layout-dashboard')}</span>
               <span>Dashboard</span>
             </a>
           </div>
@@ -171,19 +171,19 @@ function renderAppShell() {
           <div class="sidebar-section">
             <div class="sidebar-section-label">Work</div>
             <a class="sidebar-link" data-page="yt_dashboard">
-              <span class="link-icon">🎬</span>
+              <span class="link-icon">${renderIcon('clapperboard')}</span>
               <span>YT Automation</span>
             </a>
             <a class="sidebar-link" data-page="office_yt">
-              <span class="link-icon">🏢</span>
+              <span class="link-icon">${renderIcon('building-2')}</span>
               <span>Office YT</span>
             </a>
             <a class="sidebar-link" data-page="freelance_dashboard">
-              <span class="link-icon">💼</span>
+              <span class="link-icon">${renderIcon('briefcase')}</span>
               <span>Freelance Orders</span>
             </a>
             <a class="sidebar-link" data-page="tasks">
-              <span class="link-icon">📋</span>
+              <span class="link-icon">${renderIcon('clipboard-list')}</span>
               <span>All Tasks</span>
             </a>
           </div>
@@ -194,13 +194,13 @@ function renderAppShell() {
             <div class="sidebar-section-label">Management</div>
             ${hasPermission(role, 'manage_team') ? `
             <a class="sidebar-link" data-page="team">
-              <span class="link-icon">👥</span>
+              <span class="link-icon">${renderIcon('users')}</span>
               <span>Team</span>
             </a>
             ` : ''}
             ${hasPermission(role, 'view_expenses') ? `
             <a class="sidebar-link" data-page="expenses">
-              <span class="link-icon">💰</span>
+              <span class="link-icon">${renderIcon('dollar-sign')}</span>
               <span>Expenses</span>
             </a>
             ` : ''}
@@ -212,7 +212,7 @@ function renderAppShell() {
             <div class="sidebar-section-label">System</div>
             ${hasPermission(role, 'view_settings') ? `
             <a class="sidebar-link" data-page="settings">
-              <span class="link-icon">⚙️</span>
+              <span class="link-icon">${renderIcon('settings')}</span>
               <span>Settings</span>
             </a>
             ` : ''}
@@ -353,12 +353,17 @@ async function navigateTo(page, skipPushState = false) {
       console.error(`Error rendering ${page}:`, error);
       mainContent.innerHTML = `
         <div class="empty-state">
-          <div class="empty-icon">❌</div>
+          <div class="empty-icon">${renderIcon('alert-octagon')}</div>
           <h3>Something went wrong</h3>
           <p>${error.message}</p>
           <button class="btn btn-primary" onclick="location.reload()">Reload</button>
         </div>
       `;
+    } finally {
+      // Trigger Lucide after any page render
+      if (window.lucide) {
+        window.lucide.createIcons();
+      }
     }
   } finally {
     isNavigating = false;
@@ -372,7 +377,7 @@ function renderComingSoon(title, icon, description) {
     <div class="fade-in">
       <div class="page-header">
         <div>
-          <h1>${icon} ${title}</h1>
+          <h1>${renderIcon(icon)} ${title}</h1>
           <p class="subtitle">${description}</p>
         </div>
       </div>
@@ -447,10 +452,10 @@ function initAppShellEvents() {
       modalContent.innerHTML = `
         <div class="modal-header">
           <h2>Sign Out</h2>
-          <button class="btn-icon" onclick="document.getElementById('modal-overlay').classList.remove('active')">❌</button>
+          <button class="btn-icon" onclick="document.getElementById('modal-overlay').classList.remove('active')">${renderIcon('x')}</button>
         </div>
         <div class="modal-body">
-          <p style="margin-bottom: 20px; font-size: 1.1rem;">Are you sure you want to sign out of NexTask?</p>
+          <p style="margin-bottom: 20px; font-size: 1.1rem; color: var(--text-secondary)">Are you sure you want to sign out of NexTask?</p>
         </div>
         <div class="modal-footer">
           <button class="btn btn-secondary" onclick="document.getElementById('modal-overlay').classList.remove('active')">Cancel</button>

@@ -4,7 +4,7 @@
 
 import { supabase } from '../services/supabase.js';
 import { canAccessPage, hasPermission } from '../utils/permissions.js';
-import { formatCurrency, timeAgo, getStatusInfo, getInitials, getAvatarColor, showToast } from '../utils/helpers.js';
+import { formatCurrency, timeAgo, getStatusInfo, getInitials, getAvatarColor, showToast, renderIcon } from '../utils/helpers.js';
 import { addSubscription } from '../app.js';
 import { ChannelsService } from '../services/channels.js';
 import { ProjectsService } from '../services/projects.js';
@@ -26,7 +26,7 @@ export async function renderDashboardPage(userProfile) {
         </div>
         <div class="header-actions">
           <button class="btn btn-ghost" id="toggle-theme" title="Toggle dark/light mode">
-            🌙
+            ${renderIcon(document.documentElement.getAttribute('data-theme') === 'dark' ? 'moon' : 'sun')}
           </button>
         </div>
       </div>
@@ -34,28 +34,28 @@ export async function renderDashboardPage(userProfile) {
       <!-- Stats Cards -->
       <div class="dashboard-stats" id="dashboard-stats">
         <div class="stat-card purple skeleton-card clickable stagger-1" id="stat-main-tasks">
-          <div class="stat-icon">📋</div>
+          <div class="stat-icon">${renderIcon('clipboard-list')}</div>
           <div class="stat-info">
             <div class="stat-label">Active Tasks</div>
             <div class="stat-value" id="stat-tasks">—</div>
           </div>
         </div>
         <div class="stat-card teal skeleton-card clickable stagger-2" id="stat-main-orders">
-          <div class="stat-icon">📦</div>
+          <div class="stat-icon">${renderIcon('package')}</div>
           <div class="stat-info">
             <div class="stat-label">Active Orders</div>
             <div class="stat-value" id="stat-orders">—</div>
           </div>
         </div>
         <div class="stat-card green skeleton-card stagger-3">
-          <div class="stat-icon">✅</div>
+          <div class="stat-icon">${renderIcon('check-circle')}</div>
           <div class="stat-info">
             <div class="stat-label">Completed</div>
             <div class="stat-value" id="stat-completed">—</div>
           </div>
         </div>
         <div class="stat-card sky skeleton-card clickable stagger-4" id="stat-main-uploaded">
-          <div class="stat-icon">☁️</div>
+          <div class="stat-icon">${renderIcon('cloud-upload')}</div>
           <div class="stat-info">
             <div class="stat-label">Uploaded / Delivered</div>
             <div class="stat-value" id="stat-uploaded">—</div>
@@ -63,7 +63,7 @@ export async function renderDashboardPage(userProfile) {
         </div>
         ${hasPermission(role, 'view_team_stats') ? `
         <div class="stat-card blue skeleton-card">
-          <div class="stat-icon">👥</div>
+          <div class="stat-icon">${renderIcon('users')}</div>
           <div class="stat-info">
             <div class="stat-label">Team Members</div>
             <div class="stat-value" id="stat-team">—</div>
@@ -72,7 +72,7 @@ export async function renderDashboardPage(userProfile) {
         ` : ''}
         ${hasPermission(role, 'view_expenses') ? `
         <div class="stat-card orange skeleton-card">
-          <div class="stat-icon">💰</div>
+          <div class="stat-icon">${renderIcon('dollar-sign')}</div>
           <div class="stat-info">
             <div class="stat-label">This Month Expenses</div>
             <div class="stat-value" id="stat-expenses">—</div>
@@ -116,22 +116,22 @@ export async function renderDashboardPage(userProfile) {
             <h3 style="margin-bottom: var(--space-md)">⚡ Quick Actions</h3>
             <div class="quick-actions">
               <button class="quick-action-btn" data-action="new-task">
-                <div class="action-icon" style="background:rgba(108,92,231,0.12);color:var(--primary)">📋</div>
+                <div class="action-icon" style="background:rgba(108,92,231,0.12);color:var(--primary)">${renderIcon('plus-square')}</div>
                 <span class="action-label">New Task</span>
               </button>
               <button class="quick-action-btn" data-action="new-order">
-                <div class="action-icon" style="background:rgba(0,206,201,0.12);color:var(--accent)">📦</div>
+                <div class="action-icon" style="background:rgba(0,206,201,0.12);color:var(--accent)">${renderIcon('package-plus')}</div>
                 <span class="action-label">New Order</span>
               </button>
               ${hasPermission(role, 'add_users') ? `
               <button class="quick-action-btn" data-action="add-member">
-                <div class="action-icon" style="background:rgba(0,184,148,0.12);color:var(--success)">👤</div>
+                <div class="action-icon" style="background:rgba(0,184,148,0.12);color:var(--success)">${renderIcon('user-plus')}</div>
                 <span class="action-label">Add Member</span>
               </button>
               ` : ''}
               ${hasPermission(role, 'add_expenses') ? `
               <button class="quick-action-btn" data-action="add-expense">
-                <div class="action-icon" style="background:rgba(253,203,110,0.12);color:#E17055">💰</div>
+                <div class="action-icon" style="background:rgba(253,203,110,0.12);color:#E17055">${renderIcon('receipt')}</div>
                 <span class="action-label">Add Expense</span>
               </button>
               ` : ''}
@@ -142,12 +142,12 @@ export async function renderDashboardPage(userProfile) {
           <!-- 🤖 NexTube AI Hub Card -->
           <div class="card ai-hub-card clickable" onclick="window.dispatchEvent(new CustomEvent('navigate', { detail: { page: 'ai_chat' } }))" style="margin-bottom: var(--space-lg); border: 2px solid var(--primary-glow); background: linear-gradient(135deg, var(--bg-card), rgba(108, 92, 231, 0.1)); cursor: pointer; transition: all 0.3s var(--apple-spring)">
             <div style="display:flex; align-items:center; gap:var(--space-md); padding:var(--space-xs)">
-              <div class="ai-icon-pulse" style="font-size:2.5rem; filter: drop-shadow(0 0 10px var(--primary))">🤖</div>
+              <div class="ai-icon-pulse" style="filter: drop-shadow(0 0 10px var(--primary))">${renderIcon('sparkles')}</div>
               <div style="flex:1">
                 <h3 style="margin-bottom: 2px">NexTube AI Assistant</h3>
                 <p class="subtitle" style="margin-bottom: 0">Open full-screen chat with memory support</p>
               </div>
-              <div style="font-size:1.2rem; opacity:0.5">→</div>
+              <div>${renderIcon('arrow-right')}</div>
             </div>
           </div>
 
@@ -306,7 +306,7 @@ function renderRecentTasks(tasks) {
   if (!tasks.length) {
     container.innerHTML = `
       <div class="empty-state">
-        <div class="empty-icon">📋</div>
+        <div class="empty-icon">${renderIcon('clipboard')}</div>
         <h3>No tasks yet</h3>
         <p>Create your first task to get started!</p>
       </div>
@@ -340,7 +340,7 @@ function renderRecentOrders(orders) {
   if (!orders.length) {
     container.innerHTML = `
       <div class="empty-state">
-        <div class="empty-icon">📦</div>
+        <div class="empty-icon">${renderIcon('package')}</div>
         <h3>No orders yet</h3>
         <p>Add your first freelance order!</p>
       </div>
@@ -351,9 +351,9 @@ function renderRecentOrders(orders) {
   container.innerHTML = orders.map(order => {
     const status = getStatusInfo(order.status);
     const platformBadge = {
-      fiverr: '🟢 Fiverr',
-      upwork: '🟩 Upwork',
-      direct: '🔵 Direct'
+      fiverr: `<span class="platform-dot" style="background:#1dbf73"></span> Fiverr`,
+      upwork: `<span class="platform-dot" style="background:#37a000"></span> Upwork`,
+      direct: `<span class="platform-dot" style="background:#0984e3"></span> Direct`
     };
     return `
       <div class="task-item">
@@ -386,7 +386,7 @@ function renderTeamOverview(members) {
       <div class="avatar" style="background:${getAvatarColor(member.full_name)}">${getInitials(member.full_name)}</div>
       <div style="flex:1">
         <div style="font-size:var(--font-sm);font-weight:500">${member.full_name}</div>
-        <div style="font-size:var(--font-xs);color:var(--text-muted);text-transform:capitalize">${member.role} ${member.is_remote ? '· 🌍 Remote' : '· 🏢 Office'}</div>
+        <div style="font-size:var(--font-xs);color:var(--text-muted);text-transform:capitalize">${member.role} ${member.is_remote ? `· ${renderIcon('globe', 'avatar-icon')} Remote` : `· ${renderIcon('building', 'avatar-icon')} Office`}</div>
       </div>
     </div>
   `).join('');
@@ -427,9 +427,10 @@ function initDashboardEvents() {
     themeBtn.addEventListener('click', () => {
       const html = document.documentElement;
       const isDark = html.getAttribute('data-theme') === 'dark';
-      html.setAttribute('data-theme', isDark ? 'light' : 'dark');
-      themeBtn.textContent = isDark ? '🌙' : '☀️';
-      localStorage.setItem('theme', isDark ? 'light' : 'dark');
+      const newTheme = isDark ? 'light' : 'dark';
+      html.setAttribute('data-theme', newTheme);
+      themeBtn.innerHTML = renderIcon(newTheme === 'dark' ? 'moon' : 'sun');
+      localStorage.setItem('theme', newTheme);
     });
   }
 }

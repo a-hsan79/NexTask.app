@@ -6,7 +6,7 @@ import { AuthService } from '../services/auth.js';
 import { TeamService } from '../services/team.js';
 import { supabase } from '../services/supabase.js';
 import { hasPermission, getRoleDisplayName } from '../utils/permissions.js';
-import { getInitials, getAvatarColor, showToast, sanitize } from '../utils/helpers.js';
+import { getInitials, getAvatarColor, showToast, sanitize, renderIcon } from '../utils/helpers.js';
 
 export async function renderSettingsPage(userProfile) {
   const mainContent = document.getElementById('main-content');
@@ -17,7 +17,7 @@ export async function renderSettingsPage(userProfile) {
     <div class="fade-in">
       <div class="page-header">
         <div>
-          <h1>⚙️ Settings</h1>
+          <h1>${renderIcon('settings')} Settings</h1>
           <p class="subtitle">Manage your profile and app preferences</p>
         </div>
       </div>
@@ -26,7 +26,7 @@ export async function renderSettingsPage(userProfile) {
 
         <!-- Profile Card -->
         <div class="card" style="padding:var(--space-xl)">
-          <h3 style="margin-bottom:var(--space-lg);display:flex;align-items:center;gap:var(--space-sm)">👤 My Profile</h3>
+          <h3 style="margin-bottom:var(--space-lg);display:flex;align-items:center;gap:var(--space-sm)">${renderIcon('user')} My Profile</h3>
           <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:var(--space-lg)">
             <div id="settings-avatar-container" style="position:relative;cursor:pointer;width:100px;height:100px">
               ${userProfile.avatar_url ? `
@@ -42,10 +42,10 @@ export async function renderSettingsPage(userProfile) {
             
             <div class="avatar-controls" style="margin-top:var(--space-md)">
               <button type="button" class="avatar-control-btn" id="btn-settings-preview" title="View Fullscreen">
-                👁️ Preview
+                ${renderIcon('eye')} Preview
               </button>
               <button type="button" class="avatar-control-btn btn-danger-soft" id="btn-settings-remove" title="Remove Photo">
-                🗑️ Remove
+                ${renderIcon('trash-2')} Remove
               </button>
             </div>
           </div>
@@ -62,8 +62,8 @@ export async function renderSettingsPage(userProfile) {
             <div class="form-group">
               <label class="form-label">Work Mode</label>
               <select class="form-select" id="settings-workmode">
-                <option value="false" ${!userProfile.is_remote ? 'selected' : ''}>🏢 Office</option>
-                <option value="true" ${userProfile.is_remote ? 'selected' : ''}>🌐 Remote</option>
+                <option value="false" ${!userProfile.is_remote ? 'selected' : ''}>Office</option>
+                <option value="true" ${userProfile.is_remote ? 'selected' : ''}>Remote</option>
               </select>
             </div>
             <button type="submit" class="btn btn-primary" style="width:100%;margin-top:var(--space-sm)">
@@ -75,22 +75,22 @@ export async function renderSettingsPage(userProfile) {
 
         <!-- Appearance Card -->
         <div class="card" style="padding:var(--space-xl)">
-          <h3 style="margin-bottom:var(--space-lg);display:flex;align-items:center;gap:var(--space-sm)">🎨 Appearance</h3>
+          <h3 style="margin-bottom:var(--space-lg);display:flex;align-items:center;gap:var(--space-sm)">${renderIcon('palette')} Appearance</h3>
           
           <div class="form-group">
             <label class="form-label">Theme</label>
             <div style="display:flex;gap:var(--space-md);margin-top:var(--space-sm)">
               <button class="btn ${currentTheme === 'dark' ? 'btn-primary' : 'btn-secondary'}" id="theme-dark" style="flex:1">
-                🌙 Dark Mode
+                ${renderIcon('moon', 'inline-icon')} Dark Mode
               </button>
               <button class="btn ${currentTheme === 'light' ? 'btn-primary' : 'btn-secondary'}" id="theme-light" style="flex:1">
-                ☀️ Light Mode
+                ${renderIcon('sun', 'inline-icon')} Light Mode
               </button>
             </div>
           </div>
 
           <div style="margin-top:var(--space-xl);padding-top:var(--space-lg);border-top:1px solid var(--border)">
-            <h3 style="margin-bottom:var(--space-lg);display:flex;align-items:center;gap:var(--space-sm)">🔒 Security</h3>
+            <h3 style="margin-bottom:var(--space-lg);display:flex;align-items:center;gap:var(--space-sm)">${renderIcon('shield')} Security</h3>
             <div class="form-group">
               <label class="form-label">Change Password</label>
               <input type="password" class="form-input" id="settings-new-password" placeholder="New password (min 6 chars)" minlength="6" />
@@ -108,7 +108,7 @@ export async function renderSettingsPage(userProfile) {
 
         <!-- AI Config Card -->
         <div class="card" style="padding:var(--space-xl)">
-          <h3 style="margin-bottom:var(--space-lg);display:flex;align-items:center;gap:var(--space-sm)">🤖 AI Multi-Provider Config</h3>
+          <h3 style="margin-bottom:var(--space-lg);display:flex;align-items:center;gap:var(--space-sm)">${renderIcon('cpu')} AI Multi-Provider Config</h3>
           <p class="subtitle" style="margin-bottom:var(--space-md)">Switch between OpenRouter, OpenAI, Anthropic, or Gemini</p>
           
           <div class="form-group">
@@ -147,7 +147,7 @@ export async function renderSettingsPage(userProfile) {
 
         <!-- App Info Card -->
         <div class="card" style="padding:var(--space-xl)">
-          <h3 style="margin-bottom:var(--space-lg);display:flex;align-items:center;gap:var(--space-sm)">ℹ️ About NexTask</h3>
+          <h3 style="margin-bottom:var(--space-lg);display:flex;align-items:center;gap:var(--space-sm)">${renderIcon('info')} About NexTask</h3>
           <div style="text-align:center;padding:var(--space-lg) 0">
             <div style="font-size:3rem;margin-bottom:var(--space-md)">
               <span style="background:linear-gradient(135deg,#6C5CE7,#00B894);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:800;font-size:2rem">NT</span>
@@ -175,7 +175,7 @@ export async function renderSettingsPage(userProfile) {
           ${isAdmin ? `
           <div style="border-top:1px solid var(--border);padding-top:var(--space-md);margin-top:var(--space-md)">
             <h4 style="margin-bottom:var(--space-sm);color:var(--text-muted);font-size:var(--font-xs);text-transform:uppercase">Admin Actions</h4>
-            <button class="btn btn-secondary btn-sm" id="btn-export-data" style="width:100%;margin-bottom:var(--space-sm)">📊 Export All Data (CSV)</button>
+            <button class="btn btn-secondary btn-sm" id="btn-export-data" style="width:100%;margin-bottom:var(--space-sm)">${renderIcon('download')} Export All Data (CSV)</button>
           </div>
           ` : ''}
         </div>
@@ -248,7 +248,7 @@ function initSettingsEvents(userProfile) {
         }
       }
 
-      showToast('Profile updated! ✅', 'success');
+      showToast('Profile updated! 🎉', 'success');
       // Reset input state
       avatarInput.value = '';
       avatarInput.dataset.removed = 'false';
@@ -284,7 +284,7 @@ function initSettingsEvents(userProfile) {
       const url = bg.replace(/^url\(["']?/, '').replace(/["']?\)$/, '');
       window.showLightbox(url);
     } else {
-      showToast('No photo to preview 📸', 'info');
+      showToast('No photo to preview', 'info');
     }
   });
 
@@ -321,7 +321,7 @@ function initSettingsEvents(userProfile) {
     try {
       const { error } = await supabase.auth.updateUser({ password: newPw });
       if (error) throw error;
-      showToast('Password updated! 🔒', 'success');
+      showToast('Password updated! 🎉', 'success');
       document.getElementById('settings-new-password').value = '';
       document.getElementById('settings-confirm-password').value = '';
     } catch (err) { showToast('Failed: ' + err.message, 'error'); }
@@ -357,7 +357,7 @@ function initSettingsEvents(userProfile) {
       a.click();
       URL.revokeObjectURL(url);
 
-      showToast('Data exported! 📊', 'success');
+      showToast('Data exported! 📂', 'success');
     } catch (err) { showToast('Export failed: ' + err.message, 'error'); }
   });
 
@@ -422,7 +422,7 @@ function initSettingsEvents(userProfile) {
     // For backwards compatibility
     if (provider === 'openrouter') localStorage.setItem('openrouter_api_key', key);
     
-    showToast(`${provider.toUpperCase()} Configuration saved! 🤖`, 'success');
+    showToast(`${provider.toUpperCase()} Configuration saved! 🎉`, 'success');
   });
 }
 
@@ -436,5 +436,5 @@ function setTheme(theme) {
     darkBtn.className = `btn ${theme === 'dark' ? 'btn-primary' : 'btn-secondary'}`;
     lightBtn.className = `btn ${theme === 'light' ? 'btn-primary' : 'btn-secondary'}`;
   }
-  showToast(`${theme === 'dark' ? '🌙' : '☀️'} ${theme.charAt(0).toUpperCase() + theme.slice(1)} mode activated`, 'success');
+  showToast(`${theme === 'dark' ? renderIcon('moon', 'inline-icon') : renderIcon('sun', 'inline-icon')} ${theme.charAt(0).toUpperCase() + theme.slice(1)} mode activated`, 'success');
 }

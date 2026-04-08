@@ -5,7 +5,7 @@
 import { ExpensesService } from '../services/expenses.js';
 import { TeamService } from '../services/team.js';
 import { hasPermission } from '../utils/permissions.js';
-import { formatCurrency, formatDate, getInitials, getAvatarColor, showToast, sanitize, showConfirmModal } from '../utils/helpers.js';
+import { formatCurrency, formatDate, getInitials, getAvatarColor, showToast, sanitize, showConfirmModal, renderIcon } from '../utils/helpers.js';
 
 let allExpenses = [];
 let teamMembers = [];
@@ -21,17 +21,17 @@ export async function renderExpensesPage(userProfile) {
     <div class="fade-in">
       <div class="page-header" style="margin-bottom:var(--space-md)">
         <div>
-          <h1>💳 Ledger</h1>
+          <h1>${renderIcon('book-open')} Ledger</h1>
           <p class="subtitle">Track business income and expenses</p>
         </div>
-        ${canAdd ? `<button class="btn btn-primary" id="btn-new-expense">+ Add Expense</button>` : ''}
+        ${canAdd ? `<button class="btn btn-primary" id="btn-new-expense">${renderIcon('plus')} Add Expense</button>` : ''}
       </div>
 
       <!-- Type Toggle -->
       <div class="filter-bar" style="margin-bottom:var(--space-xl); border-bottom:1px solid var(--border-color); padding-bottom:var(--space-sm);">
         <div class="filter-chips">
-          <button class="filter-chip active" data-type="expense" style="font-size:1rem;">💸 Money Out</button>
-          <button class="filter-chip" data-type="income" style="font-size:1rem;">💰 Money In</button>
+          <button class="filter-chip active" data-type="expense" style="font-size:1rem;">${renderIcon('arrow-up-right', 'inline-icon')} Money Out</button>
+          <button class="filter-chip" data-type="income" style="font-size:1rem;">${renderIcon('arrow-down-left', 'inline-icon')} Money In</button>
         </div>
       </div>
 
@@ -46,8 +46,8 @@ export async function renderExpensesPage(userProfile) {
           <!-- Injected via render -->
         </div>
         <div class="filter-chips" style="background:var(--bg-panel); padding:4px; border-radius:var(--radius-full);">
-          <button class="filter-chip active" data-time="current_month" style="margin:0;">📅 This Month</button>
-          <button class="filter-chip" data-time="history" style="margin:0;">📜 History</button>
+          <button class="filter-chip active" data-time="current_month" style="margin:0;">${renderIcon('calendar', 'inline-icon')} This Month</button>
+          <button class="filter-chip" data-time="history" style="margin:0;">${renderIcon('history', 'inline-icon')} History</button>
         </div>
       </div>
 
@@ -64,7 +64,7 @@ export async function renderExpensesPage(userProfile) {
       <div class="modal">
         <div class="modal-header">
           <h2 id="expense-modal-title">Add Expense</h2>
-          <button class="modal-close" id="expense-modal-close">✕</button>
+          <button class="modal-close" id="expense-modal-close">${renderIcon('x')}</button>
         </div>
         <form id="expense-form">
           <div class="form-group">
@@ -152,17 +152,17 @@ function renderContextualUI(stats, userProfile) {
   if (isIncome) {
     statsContainer.innerHTML = `
       <div class="stat-card green">
-        <div class="stat-icon">💰</div><div class="stat-info">
+        <div class="stat-icon">${renderIcon('trending-up')}</div><div class="stat-info">
           <div class="stat-label">Total Money In</div><div class="stat-value">${formatCurrency(stats.total)}</div>
         </div>
       </div>
       <div class="stat-card blue">
-        <div class="stat-icon">▶️</div><div class="stat-info">
+        <div class="stat-icon">${renderIcon('youtube')}</div><div class="stat-info">
           <div class="stat-label">YouTube Revenue</div><div class="stat-value">${formatCurrency(stats.categories['youtube'] || 0)}</div>
         </div>
       </div>
       <div class="stat-card purple">
-        <div class="stat-icon">💼</div><div class="stat-info">
+        <div class="stat-icon">${renderIcon('briefcase')}</div><div class="stat-info">
           <div class="stat-label">Client Payments</div><div class="stat-value">${formatCurrency(stats.categories['client'] || 0)}</div>
         </div>
       </div>
@@ -170,17 +170,17 @@ function renderContextualUI(stats, userProfile) {
   } else {
     statsContainer.innerHTML = `
       <div class="stat-card orange">
-        <div class="stat-icon">💸</div><div class="stat-info">
+        <div class="stat-icon">${renderIcon('trending-down')}</div><div class="stat-info">
           <div class="stat-label">Total Money Out</div><div class="stat-value">${formatCurrency(stats.total)}</div>
         </div>
       </div>
       <div class="stat-card purple">
-        <div class="stat-icon">👥</div><div class="stat-info">
+        <div class="stat-icon">${renderIcon('users')}</div><div class="stat-info">
           <div class="stat-label">Team Expenses</div><div class="stat-value">${formatCurrency(stats.categories['team'] || 0)}</div>
         </div>
       </div>
       <div class="stat-card teal">
-        <div class="stat-icon">🏢</div><div class="stat-info">
+        <div class="stat-icon">${renderIcon('building-2')}</div><div class="stat-info">
           <div class="stat-label">Office & Software</div><div class="stat-value">${formatCurrency((stats.categories['office'] || 0) + (stats.categories['software'] || 0))}</div>
         </div>
       </div>
@@ -191,18 +191,18 @@ function renderContextualUI(stats, userProfile) {
   const activeCat = document.querySelector('[data-cat].active')?.dataset.cat || 'all';
   const filterHtml = isIncome ? `
       <button class="filter-chip ${activeCat==='all'?'active':''}" data-cat="all">All</button>
-      <button class="filter-chip ${activeCat==='youtube'?'active':''}" data-cat="youtube">▶️ YouTube</button>
-      <button class="filter-chip ${activeCat==='client'?'active':''}" data-cat="client">💼 Client</button>
-      <button class="filter-chip ${activeCat==='refund'?'active':''}" data-cat="refund">🔄 Refund</button>
-      <button class="filter-chip ${activeCat==='investment'?'active':''}" data-cat="investment">📈 Investment</button>
-      <button class="filter-chip ${activeCat==='other'?'active':''}" data-cat="other">📦 Other</button>
+      <button class="filter-chip ${activeCat==='youtube'?'active':''}" data-cat="youtube">YouTube</button>
+      <button class="filter-chip ${activeCat==='client'?'active':''}" data-cat="client">Client</button>
+      <button class="filter-chip ${activeCat==='refund'?'active':''}" data-cat="refund">Refund</button>
+      <button class="filter-chip ${activeCat==='investment'?'active':''}" data-cat="investment">Investment</button>
+      <button class="filter-chip ${activeCat==='other'?'active':''}" data-cat="other">Other</button>
   ` : `
       <button class="filter-chip ${activeCat==='all'?'active':''}" data-cat="all">All</button>
-      <button class="filter-chip ${activeCat==='team'?'active':''}" data-cat="team">👥 Team</button>
-      <button class="filter-chip ${activeCat==='office'?'active':''}" data-cat="office">🏢 Office</button>
-      <button class="filter-chip ${activeCat==='software'?'active':''}" data-cat="software">💻 Software</button>
-      <button class="filter-chip ${activeCat==='equipment'?'active':''}" data-cat="equipment">🖥️ Equipment</button>
-      <button class="filter-chip ${activeCat==='other'?'active':''}" data-cat="other">📦 Other</button>
+      <button class="filter-chip ${activeCat==='team'?'active':''}" data-cat="team">Team</button>
+      <button class="filter-chip ${activeCat==='office'?'active':''}" data-cat="office">Office</button>
+      <button class="filter-chip ${activeCat==='software'?'active':''}" data-cat="software">Software</button>
+      <button class="filter-chip ${activeCat==='equipment'?'active':''}" data-cat="equipment">Equipment</button>
+      <button class="filter-chip ${activeCat==='other'?'active':''}" data-cat="other">Other</button>
   `;
   const filterContainer = document.getElementById('dynamic-category-chips');
   filterContainer.innerHTML = filterHtml;
@@ -225,7 +225,7 @@ function renderExpensesList(expenses, userProfile) {
   if (!expenses.length) {
     container.innerHTML = `
       <div class="empty-state">
-        <div class="empty-icon">💰</div>
+        <div class="empty-icon">${renderIcon('banknote')}</div>
         <h3>No expenses yet</h3>
         <p>Start tracking your team and office expenses!</p>
       </div>
@@ -233,7 +233,17 @@ function renderExpensesList(expenses, userProfile) {
     return;
   }
 
-  const catIcons = { team: '👥', office: '🏢', software: '💻', equipment: '🖥️', other: '📦' };
+  const catIcons = { 
+    team: renderIcon('users', 'meta-icon'), 
+    office: renderIcon('building-2', 'meta-icon'), 
+    software: renderIcon('monitor', 'meta-icon'), 
+    equipment: renderIcon('hard-drive', 'meta-icon'), 
+    other: renderIcon('package', 'meta-icon'),
+    youtube: renderIcon('youtube', 'meta-icon'),
+    client: renderIcon('briefcase', 'meta-icon'),
+    refund: renderIcon('rotate-ccw', 'meta-icon'),
+    investment: renderIcon('trending-up', 'meta-icon')
+  };
 
   container.innerHTML = `
     <div class="table-container">
@@ -256,7 +266,7 @@ function renderExpensesList(expenses, userProfile) {
                 ${exp.notes ? `<div style="font-size:var(--font-xs);color:var(--text-muted)">${sanitize(exp.notes).slice(0, 50)}</div>` : ''}
               </td>
               <td>
-                <span class="badge badge-neutral">${catIcons[exp.category] || '📦'} ${exp.category}</span>
+                <span class="badge badge-neutral">${catIcons[exp.category] || renderIcon('package', 'meta-icon')} ${exp.category}</span>
               </td>
               <td style="font-weight:600;color:var(--danger)">${formatCurrency(exp.amount, exp.currency || 'PKR')}</td>
               <td>
@@ -270,8 +280,8 @@ function renderExpensesList(expenses, userProfile) {
               <td>${formatDate(exp.date)}</td>
               ${canDelete ? `
               <td style="text-align:right; white-space:nowrap;">
-                ${['owner', 'admin'].includes(userProfile.role) ? `<button class="btn btn-ghost btn-sm" data-edit-expense="${exp.id}" title="Edit">✏️</button>` : ''}
-                <button class="btn btn-ghost btn-sm" data-delete-expense="${exp.id}" title="Delete">🗑️</button>
+                ${['owner', 'admin'].includes(userProfile.role) ? `<button class="btn btn-ghost btn-sm" data-edit-expense="${exp.id}" title="Edit">${renderIcon('edit-3')}</button>` : ''}
+                <button class="btn btn-ghost btn-sm" data-delete-expense="${exp.id}" title="Delete">${renderIcon('trash-2')}</button>
               </td>
               ` : ''}
             </tr>
@@ -315,7 +325,7 @@ function initExpenseEvents(userProfile) {
       currentType = chip.dataset.type;
       
       const btnNew = document.getElementById('btn-new-expense');
-      if (btnNew) btnNew.textContent = isIncome ? '+ Add Expense' : '+ Add Income';
+      if (btnNew) btnNew.innerHTML = isIncome ? `${renderIcon('plus')} Add Expense` : `${renderIcon('plus')} Add Income`;
 
       loadExpensesData(userProfile, 'all');
     });
@@ -348,19 +358,19 @@ function initExpenseEvents(userProfile) {
 function getModalCategories() {
   if (currentType === 'income') {
     return `
-      <option value="youtube">▶️ YouTube Revenue</option>
-      <option value="client">💼 Client Payment</option>
-      <option value="refund">🔄 Refund</option>
-      <option value="investment">📈 Investment</option>
-      <option value="other">📦 Other</option>
+      <option value="youtube">YouTube Revenue</option>
+      <option value="client">Client Payment</option>
+      <option value="refund">Refund</option>
+      <option value="investment">Investment</option>
+      <option value="other">Other</option>
     `;
   }
   return `
-    <option value="team">👥 Team</option>
-    <option value="office">🏢 Office</option>
-    <option value="software">💻 Software</option>
-    <option value="equipment">🖥️ Equipment</option>
-    <option value="other">📦 Other</option>
+    <option value="team">Team</option>
+    <option value="office">Office</option>
+    <option value="software">Software</option>
+    <option value="equipment">Equipment</option>
+    <option value="other">Other</option>
   `;
 }
 

@@ -2,6 +2,14 @@
 // NEXT TASK — Helper Utilities
 // ===========================
 
+/**
+ * Returns a placeholder <i> for Lucide icons.
+ * Needs to call lucide.createIcons() after DOM injection.
+ */
+export function renderIcon(name, extraClass = '') {
+  return `<i data-lucide="${name}" class="lucide ${extraClass}"></i>`;
+}
+
 // Format date to readable string
 export function formatDate(dateStr) {
   if (!dateStr) return '—';
@@ -93,7 +101,12 @@ export function showToast(message, type = 'info', duration = 3000) {
 }
 
 function getToastIcon(type) {
-  const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+  const icons = { 
+    success: renderIcon('check-circle'), 
+    error: renderIcon('alert-circle'), 
+    warning: renderIcon('alert-triangle'), 
+    info: renderIcon('info') 
+  };
   return icons[type] || icons.info;
 }
 
@@ -117,15 +130,15 @@ export function sanitize(str) {
 // Status display info
 export function getStatusInfo(status) {
   const statuses = {
-    pending: { label: 'Pending', class: 'badge-neutral', icon: '⏳' },
-    in_progress: { label: 'In Progress', class: 'badge-info', icon: '🔄' },
-    review: { label: 'In Review', class: 'badge-warning', icon: '👀' },
-    completed: { label: 'Completed', class: 'badge-success', icon: '✅' },
-    new: { label: 'New', class: 'badge-primary', icon: '🆕' },
-    delivered: { label: 'Delivered', class: 'badge-info', icon: '📦' },
-    cancelled: { label: 'Cancelled', class: 'badge-danger', icon: '❌' }
+    pending: { label: 'Pending', class: 'badge-neutral', icon: renderIcon('clock') },
+    in_progress: { label: 'In Progress', class: 'badge-info', icon: renderIcon('refresh-cw') },
+    review: { label: 'In Review', class: 'badge-warning', icon: renderIcon('eye') },
+    completed: { label: 'Completed', class: 'badge-success', icon: renderIcon('check-circle') },
+    new: { label: 'New', class: 'badge-primary', icon: renderIcon('plus-circle') },
+    delivered: { label: 'Delivered', class: 'badge-info', icon: renderIcon('package') },
+    cancelled: { label: 'Cancelled', class: 'badge-danger', icon: renderIcon('x-circle') }
   };
-  return statuses[status] || { label: status, class: 'badge-neutral', icon: '📋' };
+  return statuses[status] || { label: status, class: 'badge-neutral', icon: renderIcon('file-text') };
 }
 
 // Priority display info
@@ -163,7 +176,7 @@ export function showConfirmModal(title, message, confirmText = 'Yes, Delete', co
     content.innerHTML = `
       <div class="modal-header">
         <h2>${sanitize(title)}</h2>
-        <button class="btn-icon" id="global-confirm-close">❌</button>
+        <button class="btn-icon" id="global-confirm-close">${renderIcon('x')}</button>
       </div>
       <div class="modal-body">
         <p style="margin-bottom: 20px; font-size: 1.1rem; color: var(--text-secondary);">${sanitize(message)}</p>
