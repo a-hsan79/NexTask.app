@@ -36,8 +36,8 @@ function getOrderModalHTML() {
               <input type="url" class="form-input" id="ord-brief" placeholder="Google Docs / Notion link" />
             </div>
             <div class="form-group">
-              <label class="form-label">🎨 Design Files Link</label>
-              <input type="url" class="form-input" id="ord-design" placeholder="Figma / Drive link" />
+              <label class="form-label">🖼️ Thumbnail Link</label>
+              <input type="url" class="form-input" id="ord-design" placeholder="Thumbnail URL" />
             </div>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md)">
@@ -660,6 +660,7 @@ function renderOrdersList(orders, userProfile) {
         <div class="link-fields-grid">
           ${renderLinkField('📝', 'Script', ord.script_link)}
           ${renderLinkField('🎙️', 'Voiceover', ord.voiceover_link)}
+          ${renderLinkField('🖼️', 'Thumbnail', ord.design_link)}
           ${renderLinkField('📦', 'Deliverable', ord.deliverable_link)}
         </div>
       </div>
