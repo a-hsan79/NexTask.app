@@ -87,6 +87,7 @@ function initChatEvents() {
           </div>
         `;
         previewContainer.classList.remove('hidden');
+        if (window.lucide) window.lucide.createIcons();
         document.getElementById('btn-remove-chat-att').onclick = () => {
           chatAttachments = [];
           previewContainer.classList.add('hidden');

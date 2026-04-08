@@ -93,6 +93,7 @@ export function showToast(message, type = 'info', duration = 3000) {
     <span class="toast-message">${message}</span>
   `;
   container.appendChild(toast);
+  if (window.lucide) window.lucide.createIcons();
 
   setTimeout(() => {
     toast.style.animation = 'slideOutRight 0.3s ease forwards';
@@ -189,6 +190,7 @@ export function showConfirmModal(title, message, confirmText = 'Yes, Delete', co
     
     // Show modal
     overlay.classList.add('active');
+    if (window.lucide) window.lucide.createIcons();
     
     // Handlers
     const closeBtn = document.getElementById('global-confirm-close');

@@ -207,6 +207,7 @@ async function loadTasksData(userProfile, statusFilter = 'all', search = '') {
     }
 
     renderTasksList(allTasks, userProfile);
+    if (window.lucide) window.lucide.createIcons();
   } catch (err) {
     console.error('Tasks error:', err);
     showToast('Failed to load tasks', 'error');

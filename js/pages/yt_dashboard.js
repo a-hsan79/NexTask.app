@@ -309,6 +309,7 @@ async function loadChannelsData(userProfile, search = '') {
     }
 
     await renderChannelsGrid(filtered, userProfile);
+    if (window.lucide) window.lucide.createIcons();
   } catch (err) {
     console.error('Channels error:', err);
     showToast('Channels: ' + (err.message || err.toString() || 'Unknown error'), 'error');
@@ -599,6 +600,7 @@ async function loadVideosData(userProfile, statusFilter = 'all', search = '') {
       search: search || undefined
     });
     await renderVideosList(allVideos, userProfile);
+    if (window.lucide) window.lucide.createIcons();
   } catch (err) {
     console.error('Videos error:', err);
     showToast('Videos: ' + (err.message || err.toString() || 'Unknown error'), 'error');

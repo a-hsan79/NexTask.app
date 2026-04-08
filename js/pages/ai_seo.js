@@ -140,6 +140,7 @@ function initSEOEvents(userProfile) {
       step2.innerHTML = `<span class="step-num">${renderIcon('check')}</span> <span>Titles</span>`;
       
       renderTitlesSelection(titleResult, researchData, currentAttachments);
+      if (window.lucide) window.lucide.createIcons();
     } catch (err) {
       showToast(err.message, 'error');
       results.innerHTML = `<div class="error-state"><p>${err.message}</p></div>`;
@@ -189,6 +190,7 @@ function initSEOEvents(userProfile) {
           step3.classList.remove('active');
           step3.innerHTML = `<span class="step-num">${renderIcon('check')}</span> <span>Final SEO Pack</span>`;
           renderFinalSEO(title, researchData, descResult);
+          if (window.lucide) window.lucide.createIcons();
         } catch (err) {
           showToast(err.message, 'error');
         }

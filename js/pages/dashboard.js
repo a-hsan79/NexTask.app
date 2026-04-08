@@ -293,6 +293,7 @@ async function loadDashboardData(userProfile) {
       .limit(6);
 
     renderTeamOverview(teamMembers || []);
+    if (window.lucide) window.lucide.createIcons();
 
   } catch (error) {
     console.error('Dashboard data error:', error);

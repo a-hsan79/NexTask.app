@@ -314,6 +314,7 @@ async function loadProjectsData(userProfile, platformFilter = 'all', search = ''
     if (unassignedCard) unassignedCard.style.display = isAdmin ? '' : 'none';
 
     renderProjectsGrid(allProjects, userProfile);
+    if (window.lucide) window.lucide.createIcons();
   } catch (err) {
     console.error('Projects error:', err);
     showToast('Failed to load projects', 'error');
@@ -600,6 +601,7 @@ async function loadOrdersData(userProfile, statusFilter = 'all', search = '') {
       search: search || undefined
     });
     renderOrdersList(allOrders, userProfile);
+    if (window.lucide) window.lucide.createIcons();
   } catch (err) {
     console.error('Orders error:', err);
     showToast('Failed to load orders', 'error');
@@ -890,7 +892,7 @@ async function renderGlobalOrders(userProfile, filterType) {
 
       <div class="page-header">
         <div>
-          <h1>${titles[filterType] || 'All Orders'}</h1>
+          <h1>${renderIcon('folder-search')} ${titles[filterType] || 'All Orders'}</h1>
           <p class="subtitle">Global list of orders across all projects</p>
         </div>
       </div>
@@ -898,7 +900,7 @@ async function renderGlobalOrders(userProfile, filterType) {
       <!-- Filters -->
       <div class="filter-bar">
         <div class="search-box" style="flex:1;max-width:400px">
-          <span class="search-icon">🔍</span>
+          <span class="search-icon">${renderIcon('search')}</span>
           <input type="text" id="global-order-search" placeholder="Search across all projects..." />
         </div>
       </div>
@@ -961,6 +963,7 @@ async function loadGlobalOrdersData(userProfile, filterType, search = '') {
     
 
     renderGlobalOrdersGrid(orders, userProfile, container);
+    if (window.lucide) window.lucide.createIcons();
   } catch (err) {
     console.error('Global orders error:', err);
     showToast('Failed to load global orders', 'error');
@@ -972,7 +975,7 @@ function renderGlobalOrdersGrid(orders, userProfile, container) {
   if (!orders.length) {
     container.innerHTML = `
       <div class="empty-state">
-        <div class="empty-icon">📦</div>
+        <div class="empty-icon">${renderIcon('package')}</div>
         <h3>No orders found</h3>
         <p>Try a different search or filter!</p>
       </div>
@@ -999,12 +1002,12 @@ function renderGlobalOrdersGrid(orders, userProfile, container) {
                   <span class="avatar avatar-xs" style="background:${getAvatarColor(assignee.full_name)};width:20px;height:20px;font-size:8px;background-image:url(${assignee.avatar_url || ''});background-size:cover">${assignee.avatar_url ? '' : getInitials(assignee.full_name)}</span>
                   ${assignee.full_name}
                 </span>
-              ` : '<span style="color:var(--text-danger)">⚠️ Unassigned</span>'}
-              <span>📅 ${timeAgo(ord.created_at)}</span>
+              ` : `<span style="color:var(--text-danger)">${renderIcon('alert-triangle', 'meta-icon')} Unassigned</span>`}
+              <span>${renderIcon('calendar', 'meta-icon')} ${timeAgo(ord.created_at)}</span>
             </div>
           </div>
           <div style="display:flex;gap:4px">
-            <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); window.openProjectOrdersGlobal('${ord.project_id}')">👁️ View Project</button>
+            <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); window.openProjectOrdersGlobal('${ord.project_id}')">${renderIcon('eye')} View Project</button>
           </div>
         </div>
       </div>
@@ -1037,7 +1040,7 @@ async function openDailyHistory(projectId, userProfile) {
       
       <div class="page-header">
         <div>
-          <h1>📜 Project History</h1>
+          <h1>${renderIcon('history')} Project History</h1>
           <p class="subtitle">Orders archived for ${sanitize(currentProject.name)} (Older than 24h)</p>
         </div>
       </div>
@@ -1068,7 +1071,7 @@ async function loadHistoryDates(projectId, userProfile) {
     if (!dates.length) {
       container.innerHTML = `
         <div class="empty-state">
-          <div class="empty-icon">📅</div>
+          <div class="empty-icon">${renderIcon('calendar')}</div>
           <h3>The archives are empty</h3>
           <p>Orders move here automatically after 24 hours.</p>
         </div>
@@ -1081,9 +1084,9 @@ async function loadHistoryDates(projectId, userProfile) {
       <div class="project-grid">
         ${dates.map(date => `
           <div class="project-card clickable" data-history-date="${date}" style="position:relative">
-            ${hasPermission(userProfile.role, 'delete_anything') ? `<button class="btn btn-ghost btn-sm" data-delete-hist-folder="${date}" style="position:absolute;top:8px;right:8px;z-index:2" title="Delete this folder">🗑️</button>` : ''}
+            ${hasPermission(userProfile.role, 'delete_anything') ? `<button class="btn btn-ghost btn-sm" data-delete-hist-folder="${date}" style="position:absolute;top:8px;right:8px;z-index:2" title="Delete this folder">${renderIcon('trash-2')}</button>` : ''}
             <div class="project-card-header">
-              <div class="project-card-icon">📁</div>
+              <div class="project-card-icon">${renderIcon('folder')}</div>
               <div>
                 <div class="project-card-title">${formatArchiveDate(date)}</div>
                 <div class="project-card-subtitle">Archives from this day</div>

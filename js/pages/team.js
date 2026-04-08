@@ -155,6 +155,7 @@ async function loadTeamData() {
     }
 
     renderTeamGrid(allMembers);
+    if (window.lucide) window.lucide.createIcons();
   } catch (err) {
     console.error('Team load error:', err);
     showToast('Failed to load team data', 'error');
@@ -403,6 +404,7 @@ async function loadPendingData() {
   try {
     const pending = await TeamService.getPendingUsers();
     renderPendingGrid(pending);
+    if (window.lucide) window.lucide.createIcons();
   } catch (err) {
     console.error('Pending load error:', err);
     showToast('Failed to load pending users', 'error');

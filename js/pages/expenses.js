@@ -138,6 +138,7 @@ async function loadExpensesData(userProfile, category = 'all') {
 
     renderContextualUI(stats, userProfile);
     renderExpensesList(allExpenses, userProfile);
+    if (window.lucide) window.lucide.createIcons();
   } catch (err) {
     console.error('Expenses load error:', err);
     showToast('Failed to load ledger', 'error');
