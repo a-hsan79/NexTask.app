@@ -827,13 +827,19 @@ async function saveVideo(userProfile) {
     const hasAnyLink = !!(v1Link || v2Link);
 
     // CRM Automation: Handle Status Transitions
-    if (hasAnyLink) {
+    const originalVideo = editId ? allVideos.find(v => v.id === editId) : null;
+    const isStatusChanged = originalVideo && originalVideo.status !== status;
+    const isNewLink = hasAnyLink && (!originalVideo || (!originalVideo.video_link && !originalVideo.video_v2_link));
+
+    if (isNewLink) {
       status = 'done';
-    } else if (!assignedTo) {
-      status = 'draft'; // Strictly follow: unassigned -> draft
-    } else {
-      // Assigned but NO link: Ensure it's in an active state
-      if (status === 'done' || status === 'uploaded' || status === 'published' || status === 'draft') {
+    } else if (!isStatusChanged) {
+      // Only apply auto-rules if user didn't manually override the status
+      if (hasAnyLink) {
+        status = 'done';
+      } else if (!assignedTo) {
+        status = 'draft';
+      } else if (status === 'done' || status === 'uploaded' || status === 'published' || status === 'draft') {
         status = 'editing';
       }
     }

@@ -402,13 +402,20 @@ async function saveTask(userProfile) {
     const resultLink = document.getElementById('task-result').value.trim();
 
     // CRM Automation: Handle Status Transitions
-    if (resultLink) {
+    const originalTask = editId ? allTasks.find(t => t.id === editId) : null;
+    const isStatusChanged = originalTask && originalTask.status !== status;
+    const isNewLink = resultLink && (!originalTask || !originalTask.result_link);
+
+    if (isNewLink) {
       status = 'done';
-    } else if (!assignedTo) {
-      status = 'pending'; // Strictly follow: unassigned -> draft (pending)
-    } else {
-      // Assigned but NO link: Ensure it's in an active state
-      if (status === 'done' || status === 'completed' || status === 'review' || status === 'pending') {
+    } else if (!isStatusChanged) {
+      // Only apply auto-rules if user didn't manually override the status
+      if (resultLink) {
+        status = 'done';
+      } else if (!assignedTo) {
+        status = 'pending';
+      } else if (status === 'done' || status === 'completed' || status === 'review' || status === 'pending') {
+        // Force active state if assigned but no link
         status = 'in_progress';
       }
     }

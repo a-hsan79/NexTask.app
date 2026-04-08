@@ -793,14 +793,19 @@ async function saveOrder(userProfile) {
     const deliverableLink = document.getElementById('ord-deliverable').value.trim();
 
     // CRM Automation: Handle Status Transitions
-    // CRM Automation: Handle Status Transitions
-    if (deliverableLink) {
+    const originalOrder = editId ? allOrders.find(o => o.id === editId) : null;
+    const isStatusChanged = originalOrder && originalOrder.status !== status;
+    const isNewLink = deliverableLink && (!originalOrder || !originalOrder.deliverable_link);
+
+    if (isNewLink) {
       status = 'done';
-    } else if (!assignedTo) {
-      status = 'new'; // Strictly follow: unassigned -> draft (new)
-    } else {
-      // Assigned but NO link: Ensure it's in an active state
-      if (status === 'done' || status === 'delivered' || status === 'completed' || status === 'new') {
+    } else if (!isStatusChanged) {
+      // Only apply auto-rules if user didn't manually override the status
+      if (deliverableLink) {
+        status = 'done';
+      } else if (!assignedTo) {
+        status = 'new';
+      } else if (status === 'done' || status === 'delivered' || status === 'completed' || status === 'new') {
         status = 'in_progress';
       }
     }
